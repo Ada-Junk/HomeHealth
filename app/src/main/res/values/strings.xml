@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">家庭健康管家</string>
+    <string name="channel_medication">用药提醒</string>
+    <string name="channel_health">健康预警</string>
+</resources>

@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<paths>
+    <!-- 文档图片保存目录 -->
+    <files-path name="documents" path="documents/" />
+    <!-- 导出文件共享目录 -->
+    <cache-path name="shared" path="shared/" />
+</paths>
