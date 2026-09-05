@@ -23,19 +23,6 @@ HomeHealth 面向多成员家庭，帮助用户集中管理全家人的健康数
 
 > 🔐 **本地优先，隐私至上**：所有健康数据以 Room 数据库存储在设备本地，不上传任何第三方服务器；API Key 仅保存在本机；不配置任何 LLM 也完全可用（内置离线问答引擎）。
 
-## 🖼️ 界面预览
-
-| 家庭档案（珊瑚红主题） | 五模块主题色 | 报告解析（Vision LLM） |
-|:---:|:---:|:---:|
-| ![家庭](docs/mockup_family_theme.jpg) | ![模块主题](docs/mockup_module_themes.jpg) | ![解析](docs/mockup_edit_ui.jpg) |
-
-| 健康问答（天空蓝主题） | 用药提醒 · 写入系统日历 | 设置（紫罗兰主题） |
-|:---:|:---:|:---:|
-| ![问答](docs/mockup_qa_theme.jpg) | ![日历](docs/mockup_calendar_ui.jpg) | ![设置](docs/mockup_settings_theme.jpg) |
-
-五大模块各有专属活力主题色：**家庭**珊瑚红 · **预警**活力橙 · **提醒**生命绿 · **问答**天空蓝 · **设置**紫罗兰。
-
----
 
 ## 🔄 核心流程
 
