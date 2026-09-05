@@ -51,6 +51,9 @@ interface AlertDao {
     @Query("UPDATE alerts SET isRead = 1")
     suspend fun markAllRead()
 
+    @Query("DELETE FROM alerts WHERE id = :id")
+    suspend fun deleteById(id: String)
+
     @Query("DELETE FROM alerts WHERE memberId = :memberId")
     suspend fun deleteByMember(memberId: String)
 }

@@ -62,6 +62,14 @@ class SettingsViewModel @Inject constructor(
     val members: StateFlow<List<FamilyMember>> = familyRepository.observeMembers()
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
+    // ---- 外观模式 ----
+    val themeMode = MutableStateFlow(settingsPrefs.themeMode)
+
+    fun setThemeMode(value: String) {
+        settingsPrefs.themeMode = value
+        themeMode.value = value
+    }
+
     // ---- 报告解析服务配置 ----
     val parseProvider = MutableStateFlow(settingsPrefs.parseProvider)
     val parseApiKey = MutableStateFlow(settingsPrefs.parseApiKey)

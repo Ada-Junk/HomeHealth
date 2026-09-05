@@ -8,6 +8,8 @@ import com.example.homehealth.data.local.entity.HealthRecord
 import com.example.homehealth.domain.repository.AlertRepository
 import com.example.homehealth.domain.repository.FamilyRepository
 import com.example.homehealth.domain.repository.HealthRecordRepository
+import com.example.homehealth.domain.usecase.DetectAnomaliesUseCase
+import com.example.homehealth.util.DateUtils
 import com.example.homehealth.util.HealthTypes
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.SharingStarted
@@ -16,6 +18,7 @@ import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
+import java.util.UUID
 import javax.inject.Inject
 import kotlin.math.abs
 
@@ -36,8 +39,9 @@ data class MetricSummary(
 class MemberDetailViewModel @Inject constructor(
     savedStateHandle: SavedStateHandle,
     private val familyRepository: FamilyRepository,
-    healthRecordRepository: HealthRecordRepository,
-    alertRepository: AlertRepository
+    private val healthRecordRepository: HealthRecordRepository,
+    alertRepository: AlertRepository,
+    private val detectAnomalies: DetectAnomaliesUseCase
 ) : ViewModel() {
 
     val memberId: String = checkNotNull(savedStateHandle["memberId"])
@@ -75,6 +79,36 @@ class MemberDetailViewModel @Inject constructor(
         HealthTypes.TOTAL_CHOLESTEROL, HealthTypes.TRIGLYCERIDES,
         HealthTypes.LDL, HealthTypes.HEART_RATE -> true
         else -> false
+    }
+
+    /** 手动添加健康记录（档案页「添加指标」）：保存后自动执行异常检测 */
+    fun addRecord(
+        type: String,
+        primary: String,
+        secondary: String?,
+        dateText: String,
+        notes: String?
+    ) {
+        val value = if (secondary.isNullOrBlank()) primary.trim()
+        else "${primary.trim()}/${secondary.trim()}"
+        val numeric = value.split("/").firstOrNull()?.trim()?.toDoubleOrNull()
+        val date = DateUtils.parseDate(dateText) ?: System.currentTimeMillis()
+        viewModelScope.launch {
+            healthRecordRepository.addRecord(
+                HealthRecord(
+                    id = UUID.randomUUID().toString(),
+                    memberId = memberId,
+                    type = type,
+                    value = value,
+                    numericValue = numeric,
+                    unit = HealthTypes.unit(type),
+                    recordDate = date,
+                    sourceDocumentId = null,
+                    notes = notes?.trim()?.ifBlank { null }
+                )
+            )
+            detectAnomalies(memberId)
+        }
     }
 
     /** 更新成员个人信息（编辑对话框保存） */

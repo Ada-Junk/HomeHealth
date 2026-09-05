@@ -26,7 +26,6 @@ data class LlmProvider(
 object LlmProviders {
 
     const val LOCAL = "local"        // 本地模式
-    const val BACKEND = "backend"    // 自建后端
     const val CUSTOM = "custom"      // 自定义 OpenAI 兼容服务
 
     /** OpenAI 兼容 chat/completions 协议 */
@@ -36,7 +35,7 @@ object LlmProviders {
     const val PROTOCOL_ANTHROPIC = "anthropic"
 
     /** 是否为「供应商直连」模式（预设 LLM 供应商 / 自定义 OpenAI 兼容服务），走 LlmClient */
-    fun isDirect(id: String): Boolean = id != LOCAL && id != BACKEND
+    fun isDirect(id: String): Boolean = id != LOCAL
 
     // ---------- 智谱 GLM（open.bigmodel.cn）----------
 
@@ -238,7 +237,7 @@ object LlmProviders {
         note = "适用于 Ollama、vLLM 等任何 OpenAI 兼容服务，视觉 / 文本模型自行填写"
     )
 
-    /** 全部供应商（本地/自建后端为伪供应商，只用于 UI 展示与分流） */
+    /** 全部供应商（本地为伪供应商，只用于 UI 展示与分流） */
     val ALL: List<LlmProvider> = listOf(
         ZHIPU, OPENAI, GEMINI, DEEPSEEK, KIMI, QWEN, ANTHROPIC, CUSTOM_PROVIDER
     )
@@ -248,7 +247,6 @@ object LlmProviders {
     /** 供应商显示名 */
     fun nameOf(id: String): String = when (id) {
         LOCAL -> "本地模式"
-        BACKEND -> "自建后端服务"
         else -> byId(id)?.name ?: id
     }
 }

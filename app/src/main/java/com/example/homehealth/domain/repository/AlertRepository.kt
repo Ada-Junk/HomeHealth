@@ -12,6 +12,7 @@ interface AlertRepository {
     suspend fun createAlert(alert: Alert)
     suspend fun markRead(id: String)
     suspend fun markAllRead()
+    suspend fun deleteAlert(id: String)
     suspend fun getUnreadByMember(memberId: String): List<Alert>
     suspend fun getAllAlerts(): List<Alert>
 }

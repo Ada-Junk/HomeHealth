@@ -47,6 +47,7 @@ import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.NavHostController
+import com.example.homehealth.data.SettingsPrefs
 import com.example.homehealth.data.local.entity.FamilyMember
 import com.example.homehealth.data.remote.LlmProviders
 import com.example.homehealth.ui.components.DropdownSelector
@@ -71,6 +72,7 @@ fun SettingsScreen(
     val qaApiKey by viewModel.qaApiKey.collectAsStateWithLifecycle()
     val qaModel by viewModel.qaModel.collectAsStateWithLifecycle()
     val qaBaseUrl by viewModel.qaBaseUrl.collectAsStateWithLifecycle()
+    val themeMode by viewModel.themeMode.collectAsStateWithLifecycle()
     val snackbarHostState = remember { SnackbarHostState() }
 
     var showAddMember by remember { mutableStateOf(false) }
@@ -148,6 +150,35 @@ fun SettingsScreen(
                     Icon(Icons.Filled.Add, contentDescription = null, modifier = Modifier.padding(end = 6.dp))
                     Text("添加家庭成员")
                 }
+            }
+
+            // ---- 外观 ----
+            item {
+                SectionTitle("外观")
+            }
+            item {
+                ModeOptionCard(
+                    title = "跟随系统",
+                    desc = "浅色 / 深色随系统设置自动切换",
+                    selected = themeMode == SettingsPrefs.THEME_SYSTEM,
+                    onClick = { viewModel.setThemeMode(SettingsPrefs.THEME_SYSTEM) }
+                )
+            }
+            item {
+                ModeOptionCard(
+                    title = "浅色模式",
+                    desc = "始终使用明亮的白色主题",
+                    selected = themeMode == SettingsPrefs.THEME_LIGHT,
+                    onClick = { viewModel.setThemeMode(SettingsPrefs.THEME_LIGHT) }
+                )
+            }
+            item {
+                ModeOptionCard(
+                    title = "深色模式",
+                    desc = "始终使用护眼的暗色主题",
+                    selected = themeMode == SettingsPrefs.THEME_DARK,
+                    onClick = { viewModel.setThemeMode(SettingsPrefs.THEME_DARK) }
+                )
             }
 
             // ---- 报告解析服务 ----
@@ -339,7 +370,7 @@ private fun ModeOptionCard(
 }
 
 /**
- * 服务供应商配置卡片：本地模式 / LLM 供应商直连 / 自建后端。
+ * 服务供应商配置卡片：本地模式 / LLM 供应商直连（含自定义 OpenAI 兼容服务）。
  * vision=true 为报告解析（视觉模型，不显示无视觉能力的供应商）；
  * vision=false 为健康问答（文本模型）。
  */
@@ -430,30 +461,6 @@ private fun ProviderSettingsCard(
                         )
                     }
                 }
-            }
-
-            // 自建后端
-            Spacer(Modifier.height(8.dp))
-            ModeOptionCard(
-                title = "自建后端服务",
-                desc = "通过您部署的后端服务器中转调用 OCR/LLM，适合发布到应用商店（API Key 不进客户端）",
-                selected = provider == LlmProviders.BACKEND,
-                onClick = { onProviderChange(LlmProviders.BACKEND) }
-            )
-            if (provider == LlmProviders.BACKEND) {
-                Spacer(Modifier.height(10.dp))
-                var urlInput by remember(baseUrl) { mutableStateOf(baseUrl) }
-                OutlinedTextField(
-                    value = urlInput,
-                    onValueChange = {
-                        urlInput = it
-                        onBaseUrlChange(it)
-                    },
-                    label = { Text("后端地址") },
-                    supportingText = { Text("修改后重启应用生效（默认 http://10.0.2.2:8000/ 指向模拟器宿主机）") },
-                    singleLine = true,
-                    modifier = Modifier.fillMaxWidth()
-                )
             }
         }
     }

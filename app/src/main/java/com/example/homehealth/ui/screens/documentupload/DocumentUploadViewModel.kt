@@ -180,13 +180,11 @@ class DocumentUploadViewModel @Inject constructor(
 
     /**
      * 当前解析引擎描述：
-     * - 供应商直连 → Vision 大模型（含模型名）+ JSON 结构化提取；
-     * - 自建后端 → OCR + LLM JSON 模式。
+     * - 供应商直连 → Vision 大模型（含模型名）+ JSON 结构化提取。
      */
     private fun parseEngineText(): String {
         val provider = settingsPrefs.parseProvider
         return when {
-            provider == LlmProviders.BACKEND -> "OCR + LLM JSON 模式提取"
             LlmProviders.isDirect(provider) -> {
                 val model = settingsPrefs.parseModel.ifBlank {
                     LlmProviders.byId(provider)?.visionModels?.firstOrNull() ?: ""

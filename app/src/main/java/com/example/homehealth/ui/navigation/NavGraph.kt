@@ -60,10 +60,9 @@ private data class BottomItem(
 
 /** 应用根导航：底部导航（各模块独立主题色）+ NavHost（按当前模块切换主题） */
 @Composable
-fun RootApp(navController: NavHostController) {
+fun RootApp(navController: NavHostController, darkTheme: Boolean) {
     val backStackEntry by navController.currentBackStackEntryAsState()
     val currentRoute = backStackEntry?.destination?.route
-    val darkTheme = androidx.compose.foundation.isSystemInDarkTheme()
 
     val bottomItems = listOf(
         BottomItem(Routes.FAMILY, "家庭", Icons.Filled.Home, ModuleTheme.FAMILY),
@@ -83,7 +82,7 @@ fun RootApp(navController: NavHostController) {
         else -> ModuleTheme.FAMILY
     }
 
-    ModuleThemedTheme(module = currentModule) {
+    ModuleThemedTheme(module = currentModule, darkTheme = darkTheme) {
         Scaffold(
             bottomBar = {
                 if (showBottomBar) {

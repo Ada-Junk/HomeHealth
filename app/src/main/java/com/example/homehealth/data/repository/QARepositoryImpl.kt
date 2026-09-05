@@ -6,11 +6,9 @@ import com.example.homehealth.data.local.dao.QAHistoryDao
 import com.example.homehealth.data.local.entity.FamilyMember
 import com.example.homehealth.data.local.entity.HealthRecord
 import com.example.homehealth.data.local.entity.QAHistory
-import com.example.homehealth.data.remote.ApiService
 import com.example.homehealth.data.remote.LlmClient
 import com.example.homehealth.data.remote.LlmProviders
 import com.example.homehealth.data.remote.LocalQaEngine
-import com.example.homehealth.data.remote.dto.QARequest
 import com.example.homehealth.domain.repository.QARepository
 import com.example.homehealth.util.DateUtils
 import com.example.homehealth.util.HealthTypes
@@ -25,7 +23,6 @@ import javax.inject.Singleton
 class QARepositoryImpl @Inject constructor(
     private val qaHistoryDao: QAHistoryDao,
     private val healthRecordDao: HealthRecordDao,
-    private val apiService: ApiService,
     private val settingsPrefs: SettingsPrefs,
     private val localQaEngine: LocalQaEngine,
     private val llmClient: LlmClient
@@ -52,38 +49,24 @@ class QARepositoryImpl @Inject constructor(
 
             val summary = buildRecordsSummary(recordsByType)
 
-            when (settingsPrefs.qaProvider) {
-                // 自建后端中转（失败回退本地）
-                LlmProviders.BACKEND -> {
-                    try {
-                        val response = apiService.askQuestion(QARequest(member.id, question))
-                        if (!response.answer.isNullOrBlank()) {
-                            answer = response.answer
-                            sources = response.sources.orEmpty()
-                        }
-                    } catch (_: Exception) {
-                    }
+            // LLM 供应商直连：智谱 / OpenAI / Gemini / DeepSeek / Kimi / 通义千问 / Anthropic / 自定义（失败回退本地）
+            if (LlmProviders.isDirect(settingsPrefs.qaProvider) &&
+                llmClient.qaConfigured() && recordsByType.isNotEmpty()
+            ) {
+                try {
+                    val llmAnswer = llmClient.askHealthQuestion(
+                        memberName = member.name,
+                        recordsSummary = summary,
+                        question = question
+                    )
+                    answer = llmAnswer.text
+                    thinking = llmAnswer.thinking
+                    sources = listOf(
+                        "${LlmProviders.nameOf(settingsPrefs.qaProvider)} · 基于已保存的健康记录"
+                    )
+                } catch (_: Exception) {
                 }
-
-                // LLM 供应商直连：智谱 / OpenAI / Gemini / DeepSeek / Kimi / 通义千问 / Anthropic / 自定义（失败回退本地）
-                else -> if (LlmProviders.isDirect(settingsPrefs.qaProvider)) {
-                    if (llmClient.qaConfigured() && recordsByType.isNotEmpty()) {
-                        try {
-                            val llmAnswer = llmClient.askHealthQuestion(
-                                memberName = member.name,
-                                recordsSummary = summary,
-                                question = question
-                            )
-                            answer = llmAnswer.text
-                            thinking = llmAnswer.thinking
-                            sources = listOf(
-                                "${LlmProviders.nameOf(settingsPrefs.qaProvider)} · 基于已保存的健康记录"
-                            )
-                        } catch (_: Exception) {
-                        }
-                    }
-                } // 本地模式 LOCAL 不走远程
-            }
+            } // 本地模式 LOCAL 不走远程
 
             // 本地规则引擎回退（本地模式 / 远程失败 / 无记录）
             if (answer == null) {

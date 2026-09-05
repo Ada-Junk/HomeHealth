@@ -8,10 +8,8 @@ import com.example.homehealth.data.local.dao.MedicalDocumentDao
 import com.example.homehealth.data.local.entity.HealthRecord
 import com.example.homehealth.data.local.entity.MedicalDocument
 import com.example.homehealth.data.local.entity.ParseStatus
-import com.example.homehealth.data.remote.ApiService
 import com.example.homehealth.data.remote.LlmClient
 import com.example.homehealth.data.remote.LlmProviders
-import com.example.homehealth.data.remote.dto.ParseDocumentRequest
 import com.example.homehealth.domain.model.ParseResult
 import com.example.homehealth.domain.repository.DocumentRepository
 import com.example.homehealth.util.FileUtils
@@ -31,7 +29,6 @@ class DocumentRepositoryImpl @Inject constructor(
     @ApplicationContext private val context: Context,
     private val medicalDocumentDao: MedicalDocumentDao,
     private val healthRecordDao: HealthRecordDao,
-    private val apiService: ApiService,
     private val settingsPrefs: SettingsPrefs,
     private val llmClient: LlmClient,
     private val gson: Gson
@@ -69,63 +66,31 @@ class DocumentRepositoryImpl @Inject constructor(
         document: MedicalDocument,
         documentType: String?
     ): ParseResult = withContext(Dispatchers.IO) {
-        when (settingsPrefs.parseProvider) {
-            // 自建后端中转
-            LlmProviders.BACKEND -> {
-                var records = emptyList<com.example.homehealth.data.remote.dto.ParsedRecord>()
-                var rawText = ""
-                var lastError: Exception? = null
-
-                try {
-                    val base64 = FileUtils.compressImageToBase64(File(document.filePath))
-                    val response = apiService.parseDocument(
-                        ParseDocumentRequest(base64, document.memberId, documentType)
-                    )
-                    if (response.status == "success" && response.extracted_data != null) {
-                        records = response.extracted_data.records.orEmpty()
-                        rawText = response.extracted_data.raw_text.orEmpty()
-                    } else {
-                        lastError = IllegalStateException("解析服务返回异常：${response.status}")
-                    }
-                } catch (e: Exception) {
-                    lastError = e
-                }
-
-                if (records.isEmpty()) {
-                    throw IllegalStateException(
-                        "报告解析失败：${lastError?.message ?: "未能识别出健康指标"}。" +
-                            "请确认「设置」中的后端地址可用后重试，或手动录入指标。"
-                    )
-                }
-                ParseResult(records, rawText)
-            }
-
-            // LLM 供应商直连（智谱 / OpenAI / Gemini / DeepSeek / Kimi / 通义千问 / Anthropic / 自定义）
-            else -> if (LlmProviders.isDirect(settingsPrefs.parseProvider)) {
-                if (!llmClient.parseConfigured()) {
-                    throw IllegalStateException(
-                        "解析服务未配置 API Key，请在「设置 → 报告解析服务」中填写"
-                    )
-                }
-                try {
-                    val base64 = FileUtils.compressImageToBase64(File(document.filePath))
-                    val result = llmClient.parseHealthDocument(base64)
-                    if (result.records.isEmpty()) {
-                        throw IllegalStateException(
-                            "未能从报告中识别出健康指标，请拍清晰完整后重试，或手动录入指标"
-                        )
-                    }
-                    result
-                } catch (e: IllegalStateException) {
-                    throw e
-                } catch (e: Exception) {
-                    throw IllegalStateException("解析失败：${e.message}", e)
-                }
-            } else {
+        // 本地模式无法解析报告图片
+        if (!LlmProviders.isDirect(settingsPrefs.parseProvider)) {
+            throw IllegalStateException(
+                "报告解析服务为本地模式，无法解析报告。请在「设置 → 报告解析服务」中选择供应商并配置。"
+            )
+        }
+        if (!llmClient.parseConfigured()) {
+            throw IllegalStateException(
+                "解析服务未配置 API Key，请在「设置 → 报告解析服务」中填写"
+            )
+        }
+        // LLM 供应商直连（智谱 / OpenAI / Gemini / DeepSeek / Kimi / 通义千问 / Anthropic / 自定义）
+        try {
+            val base64 = FileUtils.compressImageToBase64(File(document.filePath))
+            val result = llmClient.parseHealthDocument(base64)
+            if (result.records.isEmpty()) {
                 throw IllegalStateException(
-                    "报告解析服务为本地模式，无法解析报告。请在「设置 → 报告解析服务」中选择供应商并配置。"
+                    "未能从报告中识别出健康指标，请拍清晰完整后重试，或手动录入指标"
                 )
             }
+            result
+        } catch (e: IllegalStateException) {
+            throw e
+        } catch (e: Exception) {
+            throw IllegalStateException("解析失败：${e.message}", e)
         }
     }
 

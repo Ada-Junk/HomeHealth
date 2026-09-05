@@ -53,14 +53,14 @@ class LlmClient @Inject constructor(
     /** 解析服务是否已配置（供应商 + Key） */
     fun parseConfigured(): Boolean {
         val provider = settingsPrefs.parseProvider
-        if (provider == LlmProviders.LOCAL || provider == LlmProviders.BACKEND) return false
+        if (provider == LlmProviders.LOCAL) return false
         return settingsPrefs.parseApiKey.isNotBlank()
     }
 
     /** 问答服务是否已配置 */
     fun qaConfigured(): Boolean {
         val provider = settingsPrefs.qaProvider
-        if (provider == LlmProviders.LOCAL || provider == LlmProviders.BACKEND) return false
+        if (provider == LlmProviders.LOCAL) return false
         return settingsPrefs.qaApiKey.isNotBlank()
     }
 

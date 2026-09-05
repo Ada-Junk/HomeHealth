@@ -10,10 +10,12 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.CloudUpload
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.Notifications
@@ -27,6 +29,7 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -42,6 +45,7 @@ import androidx.navigation.NavHostController
 import com.example.homehealth.data.local.entity.HealthRecord
 import com.example.homehealth.ui.components.MemberAvatar
 import com.example.homehealth.ui.components.MemberEditDialog
+import com.example.homehealth.ui.components.RecordInputDialog
 import com.example.homehealth.ui.components.TrendIndicator
 import com.example.homehealth.ui.navigation.Routes
 import com.example.homehealth.util.DateUtils
@@ -59,6 +63,7 @@ fun MemberDetailScreen(
     val recentRecords by viewModel.recentRecords.collectAsStateWithLifecycle()
     val unreadAlerts by viewModel.unreadAlerts.collectAsStateWithLifecycle()
     var showEditDialog by remember { mutableStateOf(false) }
+    var showAddRecordDialog by remember { mutableStateOf(false) }
 
     Scaffold(
         topBar = {
@@ -163,14 +168,28 @@ fun MemberDetailScreen(
                 }
             }
 
-            // 指标概览
+            // 指标概览（支持手动录入）
             item {
-                SectionHeader("健康指标")
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    SectionHeader("健康指标")
+                    Spacer(Modifier.weight(1f))
+                    TextButton(onClick = { showAddRecordDialog = true }) {
+                        Icon(
+                            Icons.Filled.Add,
+                            contentDescription = null,
+                            modifier = Modifier.size(18.dp)
+                        )
+                        Text("添加指标")
+                    }
+                }
             }
             if (metrics.isEmpty()) {
                 item {
                     Text(
-                        "暂无记录。点击「上传报告」拍照或选择体检报告照片，解析后自动生成指标。",
+                        "暂无记录。可点击「上传报告」解析体检报告，或点击「添加指标」手动录入。",
                         style = MaterialTheme.typography.bodyMedium,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
@@ -211,6 +230,17 @@ fun MemberDetailScreen(
                 }
             )
         }
+    }
+
+    // 手动添加健康指标（先选指标类型，再输入数值）
+    if (showAddRecordDialog) {
+        RecordInputDialog(
+            onDismiss = { showAddRecordDialog = false },
+            onConfirm = { type, primary, secondary, dateText, notes ->
+                viewModel.addRecord(type, primary, secondary, dateText, notes)
+                showAddRecordDialog = false
+            }
+        )
     }
 }
 

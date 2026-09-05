@@ -1,6 +1,7 @@
 package com.example.homehealth.ui.screens.alerts
 
-import androidx.compose.foundation.clickable
+import androidx.compose.foundation.ExperimentalFoundationApi
+import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
@@ -13,6 +14,7 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.DoneAll
 import androidx.compose.material.icons.filled.Refresh
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Card
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilterChip
@@ -24,16 +26,23 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.hapticfeedback.HapticFeedbackType
+import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.NavHostController
+import com.example.homehealth.data.local.dao.AlertWithMemberName
 import com.example.homehealth.ui.components.SeverityBadge
 import com.example.homehealth.util.DateUtils
 import kotlinx.coroutines.launch
@@ -48,6 +57,11 @@ fun AlertsScreen(
     val state by viewModel.uiState.collectAsStateWithLifecycle()
     val snackbarHostState = remember { SnackbarHostState() }
     val scope = rememberCoroutineScope()
+    val hapticFeedback = LocalHapticFeedback.current
+    var deleteTarget by remember { mutableStateOf<AlertWithMemberName?>(null) }
+
+    // 进入预警中心时静默检测一次，保证预警与最新数据同步（新预警自动出现，列表随 Room 流刷新）
+    LaunchedEffect(Unit) { viewModel.refreshOnEnter() }
 
     Scaffold(
         topBar = {
@@ -115,24 +129,49 @@ fun AlertsScreen(
                     items(state.alerts, key = { it.alert.id }) { item ->
                         AlertCard(
                             item = item,
-                            onClick = { if (!item.alert.isRead) viewModel.markRead(item.alert.id) }
+                            onClick = { if (!item.alert.isRead) viewModel.markRead(item.alert.id) },
+                            onLongPress = {
+                                // 长按删除预警（震动反馈 + 确认）
+                                hapticFeedback.performHapticFeedback(HapticFeedbackType.LongPress)
+                                deleteTarget = item
+                            }
                         )
                     }
                 }
             }
         }
     }
+
+    // 长按删除确认
+    deleteTarget?.let { item ->
+        AlertDialog(
+            onDismissRequest = { deleteTarget = null },
+            title = { Text("删除预警") },
+            text = { Text("确定删除「${item.alert.title}」这条预警吗？") },
+            confirmButton = {
+                TextButton(onClick = {
+                    viewModel.deleteAlert(item.alert.id)
+                    deleteTarget = null
+                }) { Text("删除") }
+            },
+            dismissButton = {
+                TextButton(onClick = { deleteTarget = null }) { Text("取消") }
+            }
+        )
+    }
 }
 
+@OptIn(ExperimentalFoundationApi::class)
 @Composable
 private fun AlertCard(
-    item: com.example.homehealth.data.local.dao.AlertWithMemberName,
-    onClick: () -> Unit
+    item: AlertWithMemberName,
+    onClick: () -> Unit,
+    onLongPress: () -> Unit
 ) {
     Card(
         modifier = Modifier
             .fillMaxWidth()
-            .clickable(onClick = onClick)
+            .combinedClickable(onClick = onClick, onLongClick = onLongPress)
     ) {
         Column(modifier = Modifier.padding(14.dp)) {
             Row(verticalAlignment = Alignment.CenterVertically) {

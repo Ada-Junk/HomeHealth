@@ -19,19 +19,14 @@ import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Card
-import androidx.compose.material3.DatePicker
-import androidx.compose.material3.DatePickerDialog
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedButton
-import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
-import androidx.compose.material3.rememberDatePickerState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -45,13 +40,11 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.NavHostController
 import com.example.homehealth.data.local.entity.HealthRecord
+import com.example.homehealth.ui.components.RecordInputDialog
 import com.example.homehealth.ui.components.StatItem
 import com.example.homehealth.ui.components.TrendLineChart
 import com.example.homehealth.util.DateUtils
 import com.example.homehealth.util.HealthTypes
-import java.text.SimpleDateFormat
-import java.util.Date
-import java.util.Locale
 
 /** 指标详情页：趋势图 + 统计 + 历史记录 + 手动添加 */
 @OptIn(ExperimentalMaterial3Api::class)
@@ -191,10 +184,10 @@ fun RecordDetailScreen(
     }
 
     if (showAddDialog) {
-        RecordEditDialog(
-            type = viewModel.type,
+        RecordInputDialog(
+            fixedType = viewModel.type,
             onDismiss = { showAddDialog = false },
-            onConfirm = { primary, secondary, dateText, notes ->
+            onConfirm = { _, primary, secondary, dateText, notes ->
                 viewModel.addRecord(primary, secondary, dateText, notes)
                 showAddDialog = false
             }
@@ -203,11 +196,11 @@ fun RecordDetailScreen(
 
     // 编辑已有记录（预填现有值）
     editTarget?.let { record ->
-        RecordEditDialog(
-            type = viewModel.type,
+        RecordInputDialog(
+            fixedType = viewModel.type,
             existing = record,
             onDismiss = { editTarget = null },
-            onConfirm = { primary, secondary, dateText, notes ->
+            onConfirm = { _, primary, secondary, dateText, notes ->
                 viewModel.updateRecord(record, primary, secondary, dateText, notes)
                 editTarget = null
             }
@@ -233,132 +226,3 @@ fun RecordDetailScreen(
 }
 
 private fun formatNum(v: Double?): String = v?.let { "%.1f".format(it) } ?: "—"
-
-/** 添加 / 编辑记录对话框（编辑时预填现有值；血压需输入高压/低压） */
-@OptIn(ExperimentalMaterial3Api::class)
-@Composable
-private fun RecordEditDialog(
-    type: String,
-    existing: HealthRecord? = null,
-    onDismiss: () -> Unit,
-    onConfirm: (primary: String, secondary: String?, dateText: String, notes: String?) -> Unit
-) {
-    // 编辑：预填现有值（血压拆分为高压/低压）
-    var primary by remember(existing) {
-        mutableStateOf(
-            existing?.value?.split("/")?.firstOrNull()?.trim() ?: ""
-        )
-    }
-    var secondary by remember(existing) {
-        mutableStateOf(existing?.value?.split("/")?.getOrNull(1)?.trim() ?: "")
-    }
-    var dateText by remember(existing) {
-        mutableStateOf(
-            existing?.recordDate?.let { SimpleDateFormat("yyyy-MM-dd", Locale.CHINA).format(Date(it)) }
-                ?: SimpleDateFormat("yyyy-MM-dd", Locale.CHINA).format(Date())
-        )
-    }
-    var notes by remember(existing) { mutableStateOf(existing?.notes ?: "") }
-    var showDatePicker by remember { mutableStateOf(false) }
-    var error by remember { mutableStateOf(false) }
-
-    val isBloodPressure = type == HealthTypes.BLOOD_PRESSURE
-
-    AlertDialog(
-        onDismissRequest = onDismiss,
-        title = {
-            Text(
-                if (existing == null) "添加${HealthTypes.label(type)}记录"
-                else "编辑${HealthTypes.label(type)}记录"
-            )
-        },
-        text = {
-            Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                if (isBloodPressure) {
-                    Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                        OutlinedTextField(
-                            value = primary,
-                            onValueChange = { primary = it; error = false },
-                            label = { Text("收缩压(高压)") },
-                            isError = error,
-                            singleLine = true,
-                            modifier = Modifier.weight(1f)
-                        )
-                        OutlinedTextField(
-                            value = secondary,
-                            onValueChange = { secondary = it; error = false },
-                            label = { Text("舒张压(低压)") },
-                            isError = error,
-                            singleLine = true,
-                            modifier = Modifier.weight(1f)
-                        )
-                    }
-                } else {
-                    OutlinedTextField(
-                        value = primary,
-                        onValueChange = { primary = it; error = false },
-                        label = { Text("数值（${HealthTypes.unit(type)}）") },
-                        isError = error,
-                        singleLine = true,
-                        modifier = Modifier.fillMaxWidth()
-                    )
-                }
-                OutlinedButton(onClick = { showDatePicker = true }) {
-                    Text("测量日期：$dateText")
-                }
-                OutlinedTextField(
-                    value = notes,
-                    onValueChange = { notes = it },
-                    label = { Text("备注（可空）") },
-                    singleLine = true,
-                    modifier = Modifier.fillMaxWidth()
-                )
-                if (error) {
-                    Text(
-                        "请输入有效数值",
-                        color = MaterialTheme.colorScheme.error,
-                        style = MaterialTheme.typography.labelMedium
-                    )
-                }
-            }
-        },
-        confirmButton = {
-            TextButton(onClick = {
-                val p = primary.trim()
-                val s = secondary.trim()
-                val primaryOk = p.toDoubleOrNull() != null
-                val secondaryOk = !isBloodPressure || s.toDoubleOrNull() != null
-                if (p.isEmpty() || !primaryOk || !secondaryOk) {
-                    error = true
-                } else {
-                    onConfirm(p, s.ifBlank { null }, dateText, notes)
-                }
-            }) { Text("保存") }
-        },
-        dismissButton = {
-            TextButton(onClick = onDismiss) { Text("取消") }
-        }
-    )
-
-    if (showDatePicker) {
-        val pickerState = rememberDatePickerState(
-            initialSelectedDateMillis = System.currentTimeMillis()
-        )
-        DatePickerDialog(
-            onDismissRequest = { showDatePicker = false },
-            confirmButton = {
-                TextButton(onClick = {
-                    pickerState.selectedDateMillis?.let { ms ->
-                        dateText = SimpleDateFormat("yyyy-MM-dd", Locale.CHINA).format(Date(ms))
-                    }
-                    showDatePicker = false
-                }) { Text("确定") }
-            },
-            dismissButton = {
-                TextButton(onClick = { showDatePicker = false }) { Text("取消") }
-            }
-        ) {
-            DatePicker(state = pickerState)
-        }
-    }
-}

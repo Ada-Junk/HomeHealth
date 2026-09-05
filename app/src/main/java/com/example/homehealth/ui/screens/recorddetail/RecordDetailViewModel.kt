@@ -5,6 +5,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.homehealth.data.local.entity.HealthRecord
 import com.example.homehealth.domain.repository.HealthRecordRepository
+import com.example.homehealth.domain.usecase.DetectAnomaliesUseCase
 import com.example.homehealth.util.DateUtils
 import com.example.homehealth.util.HealthTypes
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -28,7 +29,8 @@ data class RecordDetailUiState(
 @HiltViewModel
 class RecordDetailViewModel @Inject constructor(
     savedStateHandle: SavedStateHandle,
-    private val healthRecordRepository: HealthRecordRepository
+    private val healthRecordRepository: HealthRecordRepository,
+    private val detectAnomalies: DetectAnomaliesUseCase
 ) : ViewModel() {
 
     val memberId: String = checkNotNull(savedStateHandle["memberId"])
@@ -52,7 +54,7 @@ class RecordDetailViewModel @Inject constructor(
         }
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), RecordDetailUiState())
 
-    /** 手动添加记录：value 形如 "120/80"（血压）或 "5.4" */
+    /** 手动添加记录：value 形如 "120/80"（血压）或 "5.4"；保存后自动执行异常检测 */
     fun addRecord(primary: String, secondary: String?, dateText: String, notes: String?) {
         val value = if (secondary.isNullOrBlank()) primary.trim()
         else "${primary.trim()}/${secondary.trim()}"
@@ -72,16 +74,18 @@ class RecordDetailViewModel @Inject constructor(
                     notes = notes?.trim()?.ifBlank { null }
                 )
             )
+            detectAnomalies(memberId)
         }
     }
 
     fun deleteRecord(record: HealthRecord) {
         viewModelScope.launch {
             healthRecordRepository.deleteRecord(record)
+            detectAnomalies(memberId)
         }
     }
 
-    /** 编辑已有记录：保留 id / 来源，更新数值与日期备注 */
+    /** 编辑已有记录：保留 id / 来源，更新数值与日期备注；保存后自动执行异常检测 */
     fun updateRecord(
         record: HealthRecord,
         primary: String,
@@ -103,6 +107,7 @@ class RecordDetailViewModel @Inject constructor(
                     notes = notes?.trim()?.ifBlank { null }
                 )
             )
+            detectAnomalies(memberId)
         }
     }
 }

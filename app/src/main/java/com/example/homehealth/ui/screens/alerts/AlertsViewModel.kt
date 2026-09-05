@@ -57,6 +57,18 @@ class AlertsViewModel @Inject constructor(
         viewModelScope.launch { alertRepository.markAllRead() }
     }
 
+    /** 删除单条预警（长按触发） */
+    fun deleteAlert(id: String) {
+        viewModelScope.launch { alertRepository.deleteAlert(id) }
+    }
+
+    /** 进入预警中心时静默执行一次检测（不显示进度条），保证预警与最新数据同步 */
+    fun refreshOnEnter() {
+        viewModelScope.launch {
+            runCatching { detectAnomalies.invokeAll() }
+        }
+    }
+
     /** 立即执行异常检测 */
     fun runDetection(onResult: (Int) -> Unit) {
         if (detecting.value) return
