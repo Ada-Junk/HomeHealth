@@ -230,11 +230,20 @@ fun DocumentUploadScreen(
                             Text(
                                 when (state.phase) {
                                     UploadPhase.SAVING -> "正在保存图片…"
-                                    UploadPhase.PARSING -> "正在解析报告（OCR + 结构化提取）…"
+                                    UploadPhase.PARSING -> "正在解析报告…"
                                     else -> "正在保存记录…"
                                 },
                                 style = MaterialTheme.typography.bodyMedium
                             )
+                            // 标明解析引擎：Vision 大模型（含模型名）或 OCR + LLM JSON 模式
+                            if (state.phase == UploadPhase.PARSING && state.parseEngine.isNotBlank()) {
+                                Text(
+                                    state.parseEngine,
+                                    style = MaterialTheme.typography.labelMedium,
+                                    color = MaterialTheme.colorScheme.primary,
+                                    modifier = Modifier.padding(top = 2.dp)
+                                )
+                            }
                             Spacer(Modifier.height(8.dp))
                             LinearProgressIndicator(modifier = Modifier.fillMaxWidth())
                         }
@@ -259,10 +268,25 @@ fun DocumentUploadScreen(
             // 可编辑解析结果
             if (state.phase == UploadPhase.PARSED && state.editableRecords.isNotEmpty()) {
                 item {
-                    Text(
-                        "解析结果（请核对后保存）",
-                        style = MaterialTheme.typography.titleMedium
-                    )
+                    Column {
+                        Text(
+                            "解析结果（请核对后保存）",
+                            style = MaterialTheme.typography.titleMedium
+                        )
+                        val engine = state.parseEngine.ifBlank { "结构化提取" }
+                        val converted = state.editableRecords.count { it.normalizationNote != null }
+                        val normalized = if (converted > 0) {
+                            "，已归一化 $converted 项单位"
+                        } else {
+                            "，单位已按标准字典归一"
+                        }
+                        Text(
+                            "$engine · 识别 ${state.editableRecords.size} 项指标$normalized",
+                            style = MaterialTheme.typography.labelMedium,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            modifier = Modifier.padding(top = 2.dp)
+                        )
+                    }
                 }
                 items(state.editableRecords, key = { it.id }) { record ->
                     EditableRecordCard(
@@ -349,6 +373,15 @@ private fun EditableRecordCard(
                         tint = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                 }
+            }
+            // 归一化换算说明（如「nmol/L 已换算为 ng/mL」）
+            record.normalizationNote?.let { note ->
+                Text(
+                    "已归一化：$note",
+                    style = MaterialTheme.typography.labelSmall,
+                    color = MaterialTheme.colorScheme.primary,
+                    modifier = Modifier.padding(vertical = 2.dp)
+                )
             }
             Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                 OutlinedTextField(

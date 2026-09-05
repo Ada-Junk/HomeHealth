@@ -16,6 +16,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Card
 import androidx.compose.material3.DatePicker
@@ -62,6 +63,7 @@ fun RecordDetailScreen(
     val state by viewModel.uiState.collectAsStateWithLifecycle()
     val label = HealthTypes.label(viewModel.type)
     var showAddDialog by remember { mutableStateOf(false) }
+    var editTarget by remember { mutableStateOf<HealthRecord?>(null) }
     var deleteTarget by remember { mutableStateOf<HealthRecord?>(null) }
 
     Scaffold(
@@ -168,6 +170,13 @@ fun RecordDetailScreen(
                                 color = MaterialTheme.colorScheme.onSurfaceVariant
                             )
                         }
+                        IconButton(onClick = { editTarget = record }) {
+                            Icon(
+                                Icons.Filled.Edit,
+                                contentDescription = "编辑",
+                                tint = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
                         IconButton(onClick = { deleteTarget = record }) {
                             Icon(
                                 Icons.Filled.Delete,
@@ -182,12 +191,25 @@ fun RecordDetailScreen(
     }
 
     if (showAddDialog) {
-        AddRecordDialog(
+        RecordEditDialog(
             type = viewModel.type,
             onDismiss = { showAddDialog = false },
             onConfirm = { primary, secondary, dateText, notes ->
                 viewModel.addRecord(primary, secondary, dateText, notes)
                 showAddDialog = false
+            }
+        )
+    }
+
+    // 编辑已有记录（预填现有值）
+    editTarget?.let { record ->
+        RecordEditDialog(
+            type = viewModel.type,
+            existing = record,
+            onDismiss = { editTarget = null },
+            onConfirm = { primary, secondary, dateText, notes ->
+                viewModel.updateRecord(record, primary, secondary, dateText, notes)
+                editTarget = null
             }
         )
     }
@@ -212,20 +234,31 @@ fun RecordDetailScreen(
 
 private fun formatNum(v: Double?): String = v?.let { "%.1f".format(it) } ?: "—"
 
-/** 手动添加记录对话框（血压需输入高压/低压） */
+/** 添加 / 编辑记录对话框（编辑时预填现有值；血压需输入高压/低压） */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-private fun AddRecordDialog(
+private fun RecordEditDialog(
     type: String,
+    existing: HealthRecord? = null,
     onDismiss: () -> Unit,
     onConfirm: (primary: String, secondary: String?, dateText: String, notes: String?) -> Unit
 ) {
-    var primary by remember { mutableStateOf("") }
-    var secondary by remember { mutableStateOf("") }
-    var dateText by remember {
-        mutableStateOf(SimpleDateFormat("yyyy-MM-dd", Locale.CHINA).format(Date()))
+    // 编辑：预填现有值（血压拆分为高压/低压）
+    var primary by remember(existing) {
+        mutableStateOf(
+            existing?.value?.split("/")?.firstOrNull()?.trim() ?: ""
+        )
     }
-    var notes by remember { mutableStateOf("") }
+    var secondary by remember(existing) {
+        mutableStateOf(existing?.value?.split("/")?.getOrNull(1)?.trim() ?: "")
+    }
+    var dateText by remember(existing) {
+        mutableStateOf(
+            existing?.recordDate?.let { SimpleDateFormat("yyyy-MM-dd", Locale.CHINA).format(Date(it)) }
+                ?: SimpleDateFormat("yyyy-MM-dd", Locale.CHINA).format(Date())
+        )
+    }
+    var notes by remember(existing) { mutableStateOf(existing?.notes ?: "") }
     var showDatePicker by remember { mutableStateOf(false) }
     var error by remember { mutableStateOf(false) }
 
@@ -233,7 +266,12 @@ private fun AddRecordDialog(
 
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text("添加${HealthTypes.label(type)}记录") },
+        title = {
+            Text(
+                if (existing == null) "添加${HealthTypes.label(type)}记录"
+                else "编辑${HealthTypes.label(type)}记录"
+            )
+        },
         text = {
             Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
                 if (isBloodPressure) {

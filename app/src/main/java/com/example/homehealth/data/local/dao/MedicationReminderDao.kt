@@ -3,9 +3,9 @@ package com.example.homehealth.data.local.dao
 import androidx.room.Dao
 import androidx.room.Delete
 import androidx.room.Embedded
-import androidx.room.Insert
 import androidx.room.Query
 import androidx.room.Update
+import androidx.room.Upsert
 import com.example.homehealth.data.local.entity.MedicationReminder
 import kotlinx.coroutines.flow.Flow
 
@@ -31,8 +31,9 @@ interface MedicationReminderDao {
     @Query("SELECT * FROM medication_reminders ORDER BY medicationName")
     suspend fun getAll(): List<MedicationReminder>
 
-    @Insert
-    suspend fun insert(reminder: MedicationReminder)
+    /** 插入或更新：主键已存在时执行 UPDATE（裸 @Insert 会抛唯一约束异常导致闪退） */
+    @Upsert
+    suspend fun upsert(reminder: MedicationReminder)
 
     @Update
     suspend fun update(reminder: MedicationReminder)

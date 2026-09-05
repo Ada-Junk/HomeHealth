@@ -25,7 +25,7 @@ import com.example.homehealth.data.local.entity.QAHistory
         MedicationReminder::class,
         QAHistory::class
     ],
-    version = 3,
+    version = 4,
     exportSchema = false
 )
 @TypeConverters(Converters::class)

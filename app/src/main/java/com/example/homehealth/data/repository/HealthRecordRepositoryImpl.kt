@@ -33,6 +33,8 @@ class HealthRecordRepositoryImpl @Inject constructor(
 
     override suspend fun addRecords(records: List<HealthRecord>) = healthRecordDao.insertAll(records)
 
+    override suspend fun updateRecord(record: HealthRecord) = healthRecordDao.update(record)
+
     override suspend fun deleteRecord(record: HealthRecord) = healthRecordDao.delete(record)
 
     override suspend fun getAllRecords(): List<HealthRecord> = healthRecordDao.getAll()

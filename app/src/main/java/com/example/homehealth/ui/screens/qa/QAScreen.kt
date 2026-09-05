@@ -40,6 +40,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -57,6 +58,7 @@ fun QAScreen(
     val state by viewModel.uiState.collectAsStateWithLifecycle()
     var input by remember { mutableStateOf("") }
     val listState = rememberLazyListState()
+    val keyboardController = LocalSoftwareKeyboardController.current
 
     // 新消息（含待回答问题）时自动滚动到底部
     LaunchedEffect(state.history.size, state.pendingQuestion) {
@@ -190,7 +192,11 @@ fun QAScreen(
                 IconButton(
                     onClick = {
                         // 发起成功才清空输入；未发起（无成员/加载中）时保留文字
-                        if (viewModel.ask(input)) input = ""
+                        if (viewModel.ask(input)) {
+                            input = ""
+                            // 收起输入法，输入框随 imePadding 释放自动下沉到底部
+                            keyboardController?.hide()
+                        }
                     },
                     enabled = input.isNotBlank() && !state.loading && state.members.isNotEmpty()
                 ) {

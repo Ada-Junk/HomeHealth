@@ -17,7 +17,7 @@ class MedicationReminderRepositoryImpl @Inject constructor(
         medicationReminderDao.observeAll()
 
     override suspend fun upsert(reminder: MedicationReminder) =
-        medicationReminderDao.insert(reminder)
+        medicationReminderDao.upsert(reminder)
 
     override suspend fun delete(reminder: MedicationReminder) =
         medicationReminderDao.delete(reminder)

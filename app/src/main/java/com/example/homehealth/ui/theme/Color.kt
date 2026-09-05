@@ -57,3 +57,32 @@ val LowSeverity = Color(0xFF1E88E5)
 val TrendUpBad = Color(0xFFE53935)
 val TrendDownGood = Color(0xFF2E7D32)
 val TrendNeutral = Color(0xFF757575)
+
+// ---- 模块主题色（青春活力系） ----
+// 家庭：珊瑚红（温暖亲昵）
+val FamilyPrimaryLight = Color(0xFFE91E63)
+val FamilyContainerLight = Color(0xFFFFD9E4)
+// 预警：活力橙（警醒但不刺眼）
+val AlertsPrimaryLight = Color(0xFFEF6C00)
+val AlertsContainerLight = Color(0xFFFFE0B2)
+// 提醒：生命绿（健康生长）
+val RemindersPrimaryLight = Color(0xFF2E7D32)
+val RemindersContainerLight = Color(0xFFC8E6C9)
+// 问答：天空蓝（清爽理性）
+val QaPrimaryLight = Color(0xFF039BE5)
+val QaContainerLight = Color(0xFFB3E5FC)
+// 设置：紫罗兰（沉静个性）
+val SettingsPrimaryLight = Color(0xFF8E24AA)
+val SettingsContainerLight = Color(0xFFE1BEE7)
+
+// 深色模式模块色（高亮可读）
+val FamilyPrimaryDark = Color(0xFFFF80AB)
+val FamilyContainerDark = Color(0xFF5C3A4B)
+val AlertsPrimaryDark = Color(0xFFFFB74D)
+val AlertsContainerDark = Color(0xFF5D4A2E)
+val RemindersPrimaryDark = Color(0xFFA5D6A7)
+val RemindersContainerDark = Color(0xFF33502F)
+val QaPrimaryDark = Color(0xFF81D4FA)
+val QaContainerDark = Color(0xFF2E4A5C)
+val SettingsPrimaryDark = Color(0xFFCE93D8)
+val SettingsContainerDark = Color(0xFF4A3552)

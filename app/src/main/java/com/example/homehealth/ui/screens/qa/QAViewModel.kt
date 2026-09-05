@@ -12,9 +12,12 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.filter
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.flowOf
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withTimeoutOrNull
@@ -41,11 +44,28 @@ private data class AskState(
 @HiltViewModel
 class QAViewModel @Inject constructor(
     private val qaRepository: QARepository,
+    private val settingsPrefs: com.example.homehealth.data.SettingsPrefs,
     familyRepository: FamilyRepository
 ) : ViewModel() {
 
-    private val selectedMemberId = MutableStateFlow("")
+    // 启动时恢复上次咨询的成员，重启后无需再点击即显示历史对话
+    private val selectedMemberId = MutableStateFlow(settingsPrefs.qaMemberId)
     private val askState = MutableStateFlow(AskState())
+
+    init {
+        // 成员列表就绪后，若当前选择无效（首次启动 / 成员已删除），自动选中第一个成员
+        viewModelScope.launch {
+            familyRepository.observeMembers()
+                .filter { it.isNotEmpty() }
+                .map { it.map { m -> m.id } }
+                .distinctUntilChanged()
+                .collect { ids ->
+                    if (selectedMemberId.value !in ids) {
+                        selectMember(ids.first())
+                    }
+                }
+        }
+    }
 
     private val historyFlow = selectedMemberId.flatMapLatest { id ->
         if (id.isBlank()) flowOf(emptyList()) else qaRepository.observeHistory(id)
@@ -70,6 +90,7 @@ class QAViewModel @Inject constructor(
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), QAUiState())
 
     fun selectMember(memberId: String) {
+        settingsPrefs.qaMemberId = memberId // 持久化，重启后直接选中
         selectedMemberId.value = memberId
     }
 

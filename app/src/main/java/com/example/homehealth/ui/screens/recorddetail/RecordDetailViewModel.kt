@@ -80,4 +80,29 @@ class RecordDetailViewModel @Inject constructor(
             healthRecordRepository.deleteRecord(record)
         }
     }
+
+    /** 编辑已有记录：保留 id / 来源，更新数值与日期备注 */
+    fun updateRecord(
+        record: HealthRecord,
+        primary: String,
+        secondary: String?,
+        dateText: String,
+        notes: String?
+    ) {
+        val value = if (secondary.isNullOrBlank()) primary.trim()
+        else "${primary.trim()}/${secondary.trim()}"
+        val numeric = value.split("/").firstOrNull()?.trim()?.toDoubleOrNull()
+        val date = DateUtils.parseDate(dateText) ?: record.recordDate
+        viewModelScope.launch {
+            healthRecordRepository.updateRecord(
+                record.copy(
+                    value = value,
+                    numericValue = numeric,
+                    unit = record.unit.ifBlank { HealthTypes.unit(record.type) },
+                    recordDate = date,
+                    notes = notes?.trim()?.ifBlank { null }
+                )
+            )
+        }
+    }
 }

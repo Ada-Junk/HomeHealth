@@ -13,6 +13,7 @@ interface HealthRecordRepository {
     suspend fun getLatest(memberId: String, type: String): HealthRecord?
     suspend fun addRecord(record: HealthRecord)
     suspend fun addRecords(records: List<HealthRecord>)
+    suspend fun updateRecord(record: HealthRecord)
     suspend fun deleteRecord(record: HealthRecord)
     suspend fun getAllRecords(): List<HealthRecord>
 }

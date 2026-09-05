@@ -1,5 +1,9 @@
 package com.example.homehealth.ui.screens.reminders
 
+import android.Manifest
+import android.content.pm.PackageManager
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
@@ -13,6 +17,7 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.DateRange
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material3.AlertDialog
@@ -23,8 +28,11 @@ import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.SnackbarHost
+import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -32,20 +40,27 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.core.content.ContextCompat
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.NavHostController
 import com.example.homehealth.data.local.entity.FamilyMember
 import com.example.homehealth.data.local.entity.MedicationReminder
 import com.example.homehealth.ui.components.DropdownSelector
+import com.example.homehealth.util.CalendarEventHelper
 import com.example.homehealth.util.DateUtils
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 
-/** 用药提醒页：列表 + 增删改 + 启停 */
+/** 用药提醒页：列表 + 增删改 + 启停 + 写入本地日历 */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun RemindersScreen(
@@ -55,12 +70,57 @@ fun RemindersScreen(
     val state by viewModel.uiState.collectAsStateWithLifecycle()
     var editTarget by remember { mutableStateOf<MedicationReminder?>(null) }
     var showAddDialog by remember { mutableStateOf(false) }
-    var deleteTarget by remember { mutableStateOf<MedicationReminder?>(null) }
+    var deleteTarget by remember {
+        mutableStateOf<com.example.homehealth.data.local.dao.ReminderWithMemberName?>(null)
+    }
+    val snackbarHostState = remember { SnackbarHostState() }
+    val scope = rememberCoroutineScope()
+    val context = LocalContext.current
+
+    // 待写入日历的提醒（权限通过后继续执行）
+    var pendingCalendarTarget by remember {
+        mutableStateOf<com.example.homehealth.data.local.dao.ReminderWithMemberName?>(null)
+    }
+
+    val calendarPermissionLauncher = rememberLauncherForActivityResult(
+        ActivityResultContracts.RequestMultiplePermissions()
+    ) { grants ->
+        val target = pendingCalendarTarget
+        pendingCalendarTarget = null
+        if (grants.values.all { it }) {
+            if (target != null) writeReminderToCalendar(
+                context, viewModel, scope, snackbarHostState, target
+            )
+        } else {
+            scope.launch {
+                snackbarHostState.showSnackbar("未授予日历权限，无法写入")
+            }
+        }
+    }
+
+    /** 请求权限（已有权限直接写入） */
+    fun exportToCalendar(item: com.example.homehealth.data.local.dao.ReminderWithMemberName) {
+        val granted = ContextCompat.checkSelfPermission(
+            context, Manifest.permission.WRITE_CALENDAR
+        ) == PackageManager.PERMISSION_GRANTED &&
+            ContextCompat.checkSelfPermission(
+                context, Manifest.permission.READ_CALENDAR
+            ) == PackageManager.PERMISSION_GRANTED
+        if (granted) {
+            writeReminderToCalendar(context, viewModel, scope, snackbarHostState, item)
+        } else {
+            pendingCalendarTarget = item
+            calendarPermissionLauncher.launch(
+                arrayOf(Manifest.permission.READ_CALENDAR, Manifest.permission.WRITE_CALENDAR)
+            )
+        }
+    }
 
     Scaffold(
         topBar = {
             androidx.compose.material3.TopAppBar(title = { Text("用药提醒") })
         },
+        snackbarHost = { SnackbarHost(snackbarHostState) },
         floatingActionButton = {
             FloatingActionButton(onClick = { showAddDialog = true }) {
                 Icon(Icons.Filled.Add, contentDescription = "添加提醒")
@@ -102,8 +162,9 @@ fun RemindersScreen(
                     ReminderCard(
                         item = item,
                         onEdit = { editTarget = item.reminder },
-                        onDelete = { deleteTarget = item.reminder },
-                        onToggle = { viewModel.toggleActive(item.reminder) }
+                        onDelete = { deleteTarget = item },
+                        onToggle = { viewModel.toggleActive(item.reminder) },
+                        onExportCalendar = { exportToCalendar(item) }
                     )
                 }
             }
@@ -126,14 +187,16 @@ fun RemindersScreen(
         )
     }
 
-    deleteTarget?.let { reminder ->
+    deleteTarget?.let { item ->
         AlertDialog(
             onDismissRequest = { deleteTarget = null },
             title = { Text("删除提醒") },
-            text = { Text("确定删除「${reminder.medicationName}」的用药提醒吗？") },
+            text = {
+                Text("确定删除「${item.reminder.medicationName}」的用药提醒吗？已写入日历的日程将一并删除。")
+            },
             confirmButton = {
                 TextButton(onClick = {
-                    viewModel.deleteReminder(reminder)
+                    viewModel.deleteReminder(item)
                     deleteTarget = null
                 }) { Text("删除") }
             },
@@ -149,7 +212,8 @@ private fun ReminderCard(
     item: com.example.homehealth.data.local.dao.ReminderWithMemberName,
     onEdit: () -> Unit,
     onDelete: () -> Unit,
-    onToggle: () -> Unit
+    onToggle: () -> Unit,
+    onExportCalendar: () -> Unit
 ) {
     Card(modifier = Modifier.fillMaxWidth()) {
         Column(modifier = Modifier.padding(14.dp)) {
@@ -190,7 +254,22 @@ private fun ReminderCard(
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                 modifier = Modifier.padding(top = 6.dp)
             )
-            Row(horizontalArrangement = Arrangement.End, modifier = Modifier.fillMaxWidth()) {
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(top = 4.dp)
+            ) {
+                // 写入系统日历（每日重复 + 提前提醒）
+                OutlinedButton(onClick = onExportCalendar) {
+                    Icon(
+                        Icons.Filled.DateRange,
+                        contentDescription = null,
+                        modifier = Modifier.padding(end = 4.dp)
+                    )
+                    Text("写入日历")
+                }
+                Spacer(Modifier.weight(1f))
                 IconButton(onClick = onEdit) {
                     Icon(
                         Icons.Filled.Edit,
@@ -206,6 +285,53 @@ private fun ReminderCard(
                     )
                 }
             }
+        }
+    }
+}
+
+/** 执行写入：先按签名清理旧日历事件（含旧版无 ID 的，避免重复），再写入新事件并持久化事件 ID */
+private fun writeReminderToCalendar(
+    context: android.content.Context,
+    viewModel: RemindersViewModel,
+    scope: kotlinx.coroutines.CoroutineScope,
+    snackbarHostState: SnackbarHostState,
+    item: com.example.homehealth.data.local.dao.ReminderWithMemberName
+) {
+    scope.launch {
+        try {
+            val isRewrite = item.reminder.calendarEventIdList().isNotEmpty()
+            val eventIds = withContext(Dispatchers.IO) {
+                // 重复写入时先删除旧日历事件（按记录 ID + 签名兜底，覆盖历史遗留事件）
+                if (isRewrite || item.reminder.calendarEventIds != null) {
+                    runCatching {
+                        CalendarEventHelper.deleteMedicationEvents(
+                            context = context,
+                            medicationName = item.reminder.medicationName,
+                            memberName = item.memberName,
+                            storedEventIds = item.reminder.calendarEventIdList()
+                        )
+                    }
+                }
+                CalendarEventHelper.insertMedicationEvents(
+                    context = context,
+                    medicationName = item.reminder.medicationName,
+                    dosage = item.reminder.dosage,
+                    memberName = item.memberName,
+                    times = item.reminder.dailyTimes()
+                )
+            }
+            if (eventIds.isEmpty()) {
+                snackbarHostState.showSnackbar("写入日历失败：服药时间格式无效")
+                return@launch
+            }
+            // 持久化事件 ID，删除提醒时据此同步清理日历
+            viewModel.updateCalendarEventIds(item.reminder, eventIds)
+            val refreshed = if (isRewrite) "旧日程已更新" else "每日提醒"
+            snackbarHostState.showSnackbar(
+                "已写入日历：${item.reminder.medicationName}（${eventIds.size} 个时间点 · $refreshed）"
+            )
+        } catch (e: Exception) {
+            snackbarHostState.showSnackbar("写入日历失败：${e.message}")
         }
     }
 }

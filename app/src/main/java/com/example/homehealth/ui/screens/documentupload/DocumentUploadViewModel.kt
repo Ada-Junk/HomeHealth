@@ -4,14 +4,17 @@ import android.net.Uri
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.example.homehealth.data.SettingsPrefs
 import com.example.homehealth.data.local.entity.FamilyMember
 import com.example.homehealth.data.local.entity.HealthRecord
 import com.example.homehealth.data.local.entity.MedicalDocument
+import com.example.homehealth.data.remote.LlmProviders
 import com.example.homehealth.domain.repository.DocumentRepository
 import com.example.homehealth.domain.repository.FamilyRepository
 import com.example.homehealth.domain.usecase.DetectAnomaliesUseCase
 import com.example.homehealth.util.DateUtils
 import com.example.homehealth.util.HealthTypes
+import com.example.homehealth.util.SchemaNormalizer
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -32,7 +35,9 @@ data class EditableRecord(
     val type: String,
     val value: String,
     val unit: String,
-    val date: String
+    val date: String,
+    /** 归一化换算说明（如「nmol/L 已换算为 ng/mL」），未换算为 null */
+    val normalizationNote: String? = null
 )
 
 enum class UploadPhase {
@@ -48,7 +53,9 @@ data class UploadUiState(
     val editableRecords: List<EditableRecord> = emptyList(),
     val rawText: String = "",
     val errorMessage: String? = null,
-    val documents: List<MedicalDocument> = emptyList()
+    val documents: List<MedicalDocument> = emptyList(),
+    /** 解析引擎描述（如「Vision 大模型 glm-4.6v」或「OCR + LLM JSON 模式」） */
+    val parseEngine: String = ""
 )
 
 @OptIn(ExperimentalCoroutinesApi::class)
@@ -57,7 +64,8 @@ class DocumentUploadViewModel @Inject constructor(
     savedStateHandle: SavedStateHandle,
     private val familyRepository: FamilyRepository,
     private val documentRepository: DocumentRepository,
-    private val detectAnomalies: DetectAnomaliesUseCase
+    private val detectAnomalies: DetectAnomaliesUseCase,
+    private val settingsPrefs: SettingsPrefs
 ) : ViewModel() {
 
     private val initialMemberId: String = savedStateHandle["memberId"] ?: ""
@@ -127,14 +135,21 @@ class DocumentUploadViewModel @Inject constructor(
         val memberId = selectedMemberId.value
         if (memberId.isBlank()) return
         viewModelScope.launch {
-            internal.update { it.copy(phase = UploadPhase.SAVING, errorMessage = null, editableRecords = emptyList()) }
+            internal.update {
+                it.copy(
+                    phase = UploadPhase.SAVING,
+                    errorMessage = null,
+                    editableRecords = emptyList()
+                )
+            }
             try {
                 val document = documentRepository.saveImageAndCreateDocument(uri, memberId)
                 internal.update {
                     it.copy(
                         currentDocument = document,
                         imagePath = document.filePath,
-                        phase = UploadPhase.PARSING
+                        phase = UploadPhase.PARSING,
+                        parseEngine = parseEngineText()
                     )
                 }
                 parseInternal(document)
@@ -154,7 +169,8 @@ class DocumentUploadViewModel @Inject constructor(
                     currentDocument = document,
                     imagePath = document.filePath,
                     phase = UploadPhase.PARSING,
-                    errorMessage = null
+                    errorMessage = null,
+                    parseEngine = parseEngineText()
                 )
             }
             documentRepository.markProcessing(document)
@@ -162,16 +178,39 @@ class DocumentUploadViewModel @Inject constructor(
         }
     }
 
+    /**
+     * 当前解析引擎描述：
+     * - 供应商直连 → Vision 大模型（含模型名）+ JSON 结构化提取；
+     * - 自建后端 → OCR + LLM JSON 模式。
+     */
+    private fun parseEngineText(): String {
+        val provider = settingsPrefs.parseProvider
+        return when {
+            provider == LlmProviders.BACKEND -> "OCR + LLM JSON 模式提取"
+            LlmProviders.isDirect(provider) -> {
+                val model = settingsPrefs.parseModel.ifBlank {
+                    LlmProviders.byId(provider)?.visionModels?.firstOrNull() ?: ""
+                }
+                if (model.isBlank()) "Vision 大模型 · 视觉理解 + JSON 结构化提取"
+                else "Vision 大模型 $model · 视觉理解 + JSON 结构化提取"
+            }
+            else -> ""
+        }
+    }
+
     private suspend fun parseInternal(document: MedicalDocument) {
         try {
             val result = documentRepository.parseDocument(document)
+            // Schema Normalization：指标别名映射标准字典 + 单位统一/换算
             val editable = result.records.map { r ->
+                val n = SchemaNormalizer.normalize(r.type, r.value, r.numeric_value, r.unit)
                 EditableRecord(
                     id = UUID.randomUUID().toString(),
-                    type = r.type,
-                    value = r.value,
-                    unit = r.unit.ifBlank { HealthTypes.unit(r.type) },
-                    date = r.date ?: DateUtils.formatDate(System.currentTimeMillis())
+                    type = n.type,
+                    value = n.value,
+                    unit = n.unit.ifBlank { HealthTypes.unit(n.type) },
+                    date = r.date ?: DateUtils.formatDate(System.currentTimeMillis()),
+                    normalizationNote = n.note
                 )
             }
             internal.update {

@@ -64,6 +64,11 @@ class SettingsPrefs @Inject constructor(@ApplicationContext context: Context) {
         get() = sp.getString(KEY_QA_URL, Constants.DEFAULT_BASE_URL) ?: Constants.DEFAULT_BASE_URL
         set(value) = sp.edit().putString(KEY_QA_URL, value.trim()).apply()
 
+    /** 健康问答上次咨询的成员（重启后自动选中，直接显示历史对话） */
+    var qaMemberId: String
+        get() = sp.getString(KEY_QA_MEMBER, "") ?: ""
+        set(value) = sp.edit().putString(KEY_QA_MEMBER, value).apply()
+
     /** 旧版本（单 serviceMode）一次性迁移到双服务配置 */
     private fun migrateOldServiceMode() {
         if (sp.contains(KEY_PARSE_PROVIDER) || !sp.contains("service_mode")) return
@@ -94,5 +99,6 @@ class SettingsPrefs @Inject constructor(@ApplicationContext context: Context) {
         private const val KEY_QA_KEY = "qa_api_key"
         private const val KEY_QA_MODEL = "qa_model"
         private const val KEY_QA_URL = "qa_base_url"
+        private const val KEY_QA_MEMBER = "qa_member_id"
     }
 }
