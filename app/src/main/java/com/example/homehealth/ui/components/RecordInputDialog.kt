@@ -20,7 +20,9 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
+import com.example.homehealth.R
 import com.example.homehealth.data.local.entity.HealthRecord
 import com.example.homehealth.util.HealthTypes
 import java.text.SimpleDateFormat
@@ -77,9 +79,9 @@ fun RecordInputDialog(
         title = {
             Text(
                 when {
-                    isEdit -> "编辑${HealthTypes.label(selectedType)}记录"
-                    typeLocked -> "添加${HealthTypes.label(selectedType)}记录"
-                    else -> "添加健康指标"
+                    isEdit -> stringResource(R.string.record_edit_title, stringResource(HealthTypes.labelRes(selectedType)))
+                    typeLocked -> stringResource(R.string.record_add_typed_title, stringResource(HealthTypes.labelRes(selectedType)))
+                    else -> stringResource(R.string.record_add_generic_title)
                 }
             )
         },
@@ -87,12 +89,13 @@ fun RecordInputDialog(
             Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
                 // 未锁定类型时可选指标（49 项标准指标体系）
                 if (!typeLocked) {
+                    val typeOptions = HealthTypes.ALL.map { it to stringResource(HealthTypes.labelRes(it)) }
                     DropdownSelector(
-                        options = HealthTypes.ALL.map { HealthTypes.label(it) },
-                        selected = HealthTypes.label(selectedType),
-                        label = "指标类型",
+                        options = typeOptions.map { it.second },
+                        selected = stringResource(HealthTypes.labelRes(selectedType)),
+                        label = stringResource(R.string.record_type_label),
                         onSelect = { label ->
-                            selectedType = HealthTypes.ALL.first { HealthTypes.label(it) == label }
+                            selectedType = typeOptions.first { it.second == label }.first
                             error = false
                         }
                     )
@@ -102,7 +105,7 @@ fun RecordInputDialog(
                         OutlinedTextField(
                             value = primary,
                             onValueChange = { primary = it; error = false },
-                            label = { Text("收缩压(高压)") },
+                            label = { Text(stringResource(R.string.record_systolic)) },
                             isError = error,
                             singleLine = true,
                             modifier = Modifier.weight(1f)
@@ -110,7 +113,7 @@ fun RecordInputDialog(
                         OutlinedTextField(
                             value = secondary,
                             onValueChange = { secondary = it; error = false },
-                            label = { Text("舒张压(低压)") },
+                            label = { Text(stringResource(R.string.record_diastolic)) },
                             isError = error,
                             singleLine = true,
                             modifier = Modifier.weight(1f)
@@ -120,25 +123,25 @@ fun RecordInputDialog(
                     OutlinedTextField(
                         value = primary,
                         onValueChange = { primary = it; error = false },
-                        label = { Text("数值（${HealthTypes.unit(selectedType)}）") },
+                        label = { Text(stringResource(R.string.record_value_unit, HealthTypes.unit(selectedType))) },
                         isError = error,
                         singleLine = true,
                         modifier = Modifier.fillMaxWidth()
                     )
                 }
                 OutlinedButton(onClick = { showDatePicker = true }) {
-                    Text("测量日期：$dateText")
+                    Text(stringResource(R.string.record_measure_date, dateText))
                 }
                 OutlinedTextField(
                     value = notes,
                     onValueChange = { notes = it },
-                    label = { Text("备注（可空）") },
+                    label = { Text(stringResource(R.string.record_notes_label)) },
                     singleLine = true,
                     modifier = Modifier.fillMaxWidth()
                 )
                 if (error) {
                     Text(
-                        "请输入有效数值",
+                        stringResource(R.string.record_invalid_value),
                         color = MaterialTheme.colorScheme.error,
                         style = MaterialTheme.typography.labelMedium
                     )
@@ -156,10 +159,10 @@ fun RecordInputDialog(
                 } else {
                     onConfirm(selectedType, p, s.ifBlank { null }, dateText, notes)
                 }
-            }) { Text("保存") }
+            }) { Text(stringResource(R.string.common_save)) }
         },
         dismissButton = {
-            TextButton(onClick = onDismiss) { Text("取消") }
+            TextButton(onClick = onDismiss) { Text(stringResource(R.string.common_cancel)) }
         }
     )
 
@@ -175,10 +178,10 @@ fun RecordInputDialog(
                         dateText = SimpleDateFormat("yyyy-MM-dd", Locale.CHINA).format(Date(ms))
                     }
                     showDatePicker = false
-                }) { Text("确定") }
+                }) { Text(stringResource(R.string.common_confirm)) }
             },
             dismissButton = {
-                TextButton(onClick = { showDatePicker = false }) { Text("取消") }
+                TextButton(onClick = { showDatePicker = false }) { Text(stringResource(R.string.common_cancel)) }
             }
         ) {
             DatePicker(state = pickerState)

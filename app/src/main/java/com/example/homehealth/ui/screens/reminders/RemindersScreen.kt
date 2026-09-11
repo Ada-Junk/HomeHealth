@@ -45,15 +45,18 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.core.content.ContextCompat
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.NavHostController
+import com.example.homehealth.R
 import com.example.homehealth.data.local.entity.FamilyMember
 import com.example.homehealth.data.local.entity.MedicationReminder
 import com.example.homehealth.ui.components.DropdownSelector
+import com.example.homehealth.ui.components.memberPickerLabel
 import com.example.homehealth.util.CalendarEventHelper
 import com.example.homehealth.util.DateUtils
 import kotlinx.coroutines.Dispatchers
@@ -93,7 +96,7 @@ fun RemindersScreen(
             )
         } else {
             scope.launch {
-                snackbarHostState.showSnackbar("未授予日历权限，无法写入")
+                snackbarHostState.showSnackbar(context.getString(R.string.reminders_calendar_denied))
             }
         }
     }
@@ -118,12 +121,12 @@ fun RemindersScreen(
 
     Scaffold(
         topBar = {
-            androidx.compose.material3.TopAppBar(title = { Text("用药提醒") })
+            androidx.compose.material3.TopAppBar(title = { Text(stringResource(R.string.reminders_title)) })
         },
         snackbarHost = { SnackbarHost(snackbarHostState) },
         floatingActionButton = {
             FloatingActionButton(onClick = { showAddDialog = true }) {
-                Icon(Icons.Filled.Add, contentDescription = "添加提醒")
+                Icon(Icons.Filled.Add, contentDescription = stringResource(R.string.reminders_add_cd))
             }
         }
     ) { padding ->
@@ -137,13 +140,13 @@ fun RemindersScreen(
                 verticalArrangement = Arrangement.Center
             ) {
                 Text(
-                    "还没有用药提醒",
+                    stringResource(R.string.reminders_empty_title),
                     style = MaterialTheme.typography.titleMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
                 Spacer(Modifier.height(8.dp))
                 Text(
-                    "点击右下角 + 添加药品与服药时间",
+                    stringResource(R.string.reminders_empty_desc),
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
@@ -190,18 +193,18 @@ fun RemindersScreen(
     deleteTarget?.let { item ->
         AlertDialog(
             onDismissRequest = { deleteTarget = null },
-            title = { Text("删除提醒") },
+            title = { Text(stringResource(R.string.reminders_delete_title)) },
             text = {
-                Text("确定删除「${item.reminder.medicationName}」的用药提醒吗？已写入日历的日程将一并删除。")
+                Text(stringResource(R.string.reminders_delete_confirm, item.reminder.medicationName))
             },
             confirmButton = {
                 TextButton(onClick = {
                     viewModel.deleteReminder(item)
                     deleteTarget = null
-                }) { Text("删除") }
+                }) { Text(stringResource(R.string.common_delete)) }
             },
             dismissButton = {
-                TextButton(onClick = { deleteTarget = null }) { Text("取消") }
+                TextButton(onClick = { deleteTarget = null }) { Text(stringResource(R.string.common_cancel)) }
             }
         )
     }
@@ -231,7 +234,8 @@ private fun ReminderCard(
                     )
                 }
                 Text(
-                    if (item.reminder.active) "已启用" else "已停用",
+                    if (item.reminder.active) stringResource(R.string.reminders_enabled)
+                    else stringResource(R.string.reminders_disabled),
                     style = MaterialTheme.typography.labelMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
@@ -249,7 +253,7 @@ private fun ReminderCard(
                 }
             }
             Text(
-                text = "自 ${DateUtils.formatDate(item.reminder.startDate)} 起 · 每日提醒",
+                text = stringResource(R.string.reminders_since, DateUtils.formatDate(item.reminder.startDate)),
                 style = MaterialTheme.typography.labelMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                 modifier = Modifier.padding(top = 6.dp)
@@ -267,20 +271,20 @@ private fun ReminderCard(
                         contentDescription = null,
                         modifier = Modifier.padding(end = 4.dp)
                     )
-                    Text("写入日历")
+                    Text(stringResource(R.string.reminders_write_calendar))
                 }
                 Spacer(Modifier.weight(1f))
                 IconButton(onClick = onEdit) {
                     Icon(
                         Icons.Filled.Edit,
-                        contentDescription = "编辑",
+                        contentDescription = stringResource(R.string.common_edit),
                         tint = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                 }
                 IconButton(onClick = onDelete) {
                     Icon(
                         Icons.Filled.Delete,
-                        contentDescription = "删除",
+                        contentDescription = stringResource(R.string.common_delete),
                         tint = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                 }
@@ -321,17 +325,25 @@ private fun writeReminderToCalendar(
                 )
             }
             if (eventIds.isEmpty()) {
-                snackbarHostState.showSnackbar("写入日历失败：服药时间格式无效")
+                snackbarHostState.showSnackbar(context.getString(R.string.reminders_calendar_invalid))
                 return@launch
             }
             // 持久化事件 ID，删除提醒时据此同步清理日历
             viewModel.updateCalendarEventIds(item.reminder, eventIds)
-            val refreshed = if (isRewrite) "旧日程已更新" else "每日提醒"
+            val refreshed = context.getString(
+                if (isRewrite) R.string.reminders_calendar_updated
+                else R.string.reminders_calendar_new
+            )
             snackbarHostState.showSnackbar(
-                "已写入日历：${item.reminder.medicationName}（${eventIds.size} 个时间点 · $refreshed）"
+                context.getString(
+                    R.string.reminders_calendar_done,
+                    item.reminder.medicationName, eventIds.size, refreshed
+                )
             )
         } catch (e: Exception) {
-            snackbarHostState.showSnackbar("写入日历失败：${e.message}")
+            snackbarHostState.showSnackbar(
+                context.getString(R.string.reminders_calendar_failed, e.message ?: "")
+            )
         }
     }
 }
@@ -344,37 +356,43 @@ private fun ReminderEditDialog(
     onDismiss: () -> Unit,
     onSave: (memberId: String, name: String, dosage: String, times: List<String>) -> Unit
 ) {
-    var memberLabel by remember {
-        mutableStateOf(
-            members.firstOrNull { it.id == existing?.memberId }
-                ?.let { "${it.name}（${it.relationship}）" }
-                ?: members.firstOrNull()?.let { "${it.name}（${it.relationship}）" } ?: ""
-        )
-    }
+    // 成员下拉选项（显示与匹配统一使用 memberPickerLabel 格式）
+    val memberOptions = members.map { it to memberPickerLabel(it.name, it.relationship) }
+    val initialLabel = memberOptions.firstOrNull { it.first.id == existing?.memberId }?.second
+        ?: memberOptions.firstOrNull()?.second ?: ""
+    var memberLabel by remember { mutableStateOf(initialLabel) }
     var name by remember { mutableStateOf(existing?.medicationName ?: "") }
     var dosage by remember { mutableStateOf(existing?.dosage ?: "") }
     var timesText by remember {
         mutableStateOf(existing?.dailyTimes()?.joinToString(", ") ?: "08:00, 20:00")
     }
     var error by remember { mutableStateOf(false) }
+    val defaultDosage = stringResource(R.string.reminders_default_dosage)
 
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text(if (existing == null) "添加用药提醒" else "编辑用药提醒") },
+        title = {
+            Text(
+                stringResource(
+                    if (existing == null) R.string.reminders_add_title
+                    else R.string.reminders_edit_title
+                )
+            )
+        },
         text = {
             Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
                 if (members.isNotEmpty()) {
                     DropdownSelector(
-                        options = members.map { "${it.name}（${it.relationship}）" },
+                        options = memberOptions.map { it.second },
                         selected = memberLabel,
-                        label = "用药成员",
+                        label = stringResource(R.string.reminders_member_label),
                         onSelect = { memberLabel = it }
                     )
                 }
                 OutlinedTextField(
                     value = name,
                     onValueChange = { name = it; error = false },
-                    label = { Text("药品名称") },
+                    label = { Text(stringResource(R.string.reminders_med_name)) },
                     isError = error,
                     singleLine = true,
                     modifier = Modifier.fillMaxWidth()
@@ -382,22 +400,22 @@ private fun ReminderEditDialog(
                 OutlinedTextField(
                     value = dosage,
                     onValueChange = { dosage = it },
-                    label = { Text("剂量（如 5mg × 1片）") },
+                    label = { Text(stringResource(R.string.reminders_dosage)) },
                     singleLine = true,
                     modifier = Modifier.fillMaxWidth()
                 )
                 OutlinedTextField(
                     value = timesText,
                     onValueChange = { timesText = it; error = false },
-                    label = { Text("每日时间（逗号分隔）") },
-                    supportingText = { Text("格式：HH:mm，如 08:00, 20:00") },
+                    label = { Text(stringResource(R.string.reminders_times)) },
+                    supportingText = { Text(stringResource(R.string.reminders_times_hint)) },
                     isError = error,
                     singleLine = true,
                     modifier = Modifier.fillMaxWidth()
                 )
                 if (error) {
                     Text(
-                        "请填写药品名称，时间格式为 HH:mm（逗号分隔）",
+                        stringResource(R.string.reminders_form_error),
                         color = MaterialTheme.colorScheme.error,
                         style = MaterialTheme.typography.labelMedium
                     )
@@ -406,20 +424,18 @@ private fun ReminderEditDialog(
         },
         confirmButton = {
             TextButton(onClick = {
-                val member = members.firstOrNull {
-                    "${it.name}（${it.relationship}）" == memberLabel
-                }
+                val member = memberOptions.firstOrNull { it.second == memberLabel }?.first
                 val times = timesText.split("，", ",").map { it.trim() }
                     .filter { it.matches(Regex("\\d{1,2}:\\d{2}")) }
                 if (name.isBlank() || member == null || times.isEmpty()) {
                     error = true
                 } else {
-                    onSave(member.id, name.trim(), dosage.trim().ifBlank { "遵医嘱" }, times)
+                    onSave(member.id, name.trim(), dosage.trim().ifBlank { defaultDosage }, times)
                 }
-            }) { Text("保存") }
+            }) { Text(stringResource(R.string.common_save)) }
         },
         dismissButton = {
-            TextButton(onClick = onDismiss) { Text("取消") }
+            TextButton(onClick = onDismiss) { Text(stringResource(R.string.common_cancel)) }
         }
     )
 }

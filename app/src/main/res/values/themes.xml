@@ -1,6 +1,11 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <style name="Theme.HomeHealth" parent="android:Theme.Material.Light.NoActionBar">
+    <style name="Theme.HomeHealth" parent="Theme.AppCompat.DayNight.NoActionBar">
         <item name="android:windowBackground">@color/app_background</item>
+    </style>
+
+    <!-- 启动页：白色窗口背景，避免冷启动白屏前的色差闪烁 -->
+    <style name="Theme.HomeHealth.Splash" parent="Theme.AppCompat.DayNight.NoActionBar">
+        <item name="android:windowBackground">@color/splash_background</item>
     </style>
 </resources>

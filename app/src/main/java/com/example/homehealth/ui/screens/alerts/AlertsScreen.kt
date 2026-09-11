@@ -37,11 +37,14 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalHapticFeedback
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.NavHostController
+import com.example.homehealth.R
 import com.example.homehealth.data.local.dao.AlertWithMemberName
 import com.example.homehealth.ui.components.SeverityBadge
 import com.example.homehealth.util.DateUtils
@@ -58,6 +61,7 @@ fun AlertsScreen(
     val snackbarHostState = remember { SnackbarHostState() }
     val scope = rememberCoroutineScope()
     val hapticFeedback = LocalHapticFeedback.current
+    val context = LocalContext.current
     var deleteTarget by remember { mutableStateOf<AlertWithMemberName?>(null) }
 
     // 进入预警中心时静默检测一次，保证预警与最新数据同步（新预警自动出现，列表随 Room 流刷新）
@@ -66,22 +70,22 @@ fun AlertsScreen(
     Scaffold(
         topBar = {
             androidx.compose.material3.TopAppBar(
-                title = { Text("预警中心") },
+                title = { Text(stringResource(R.string.alerts_title)) },
                 actions = {
                     IconButton(onClick = {
                         viewModel.runDetection { created ->
                             scope.launch {
                                 snackbarHostState.showSnackbar(
-                                    if (created > 0) "检测完成，新增 $created 条预警"
-                                    else "检测完成，暂无新的异常"
+                                    if (created > 0) context.getString(R.string.alerts_detected_new, created)
+                                    else context.getString(R.string.alerts_detected_none)
                                 )
                             }
                         }
                     }) {
-                        Icon(Icons.Filled.Refresh, contentDescription = "立即检测")
+                        Icon(Icons.Filled.Refresh, contentDescription = stringResource(R.string.alerts_run_now_cd))
                     }
                     IconButton(onClick = { viewModel.markAllRead() }) {
-                        Icon(Icons.Filled.DoneAll, contentDescription = "全部已读")
+                        Icon(Icons.Filled.DoneAll, contentDescription = stringResource(R.string.alerts_mark_all_read_cd))
                     }
                 }
             )
@@ -104,19 +108,19 @@ fun AlertsScreen(
                 FilterChip(
                     selected = state.filter == AlertFilter.ALL,
                     onClick = { viewModel.setFilter(AlertFilter.ALL) },
-                    label = { Text("全部（${state.alerts.size}）") }
+                    label = { Text(stringResource(R.string.alerts_filter_all, state.alerts.size)) }
                 )
                 FilterChip(
                     selected = state.filter == AlertFilter.UNREAD,
                     onClick = { viewModel.setFilter(AlertFilter.UNREAD) },
-                    label = { Text("未读（${state.unreadCount}）") }
+                    label = { Text(stringResource(R.string.alerts_filter_unread, state.unreadCount)) }
                 )
             }
 
             if (state.alerts.isEmpty()) {
                 Text(
-                    if (state.filter == AlertFilter.UNREAD) "没有未读预警"
-                    else "暂无预警。上传报告或点击右上角「立即检测」分析健康数据。",
+                    if (state.filter == AlertFilter.UNREAD) stringResource(R.string.alerts_no_unread)
+                    else stringResource(R.string.alerts_empty),
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     modifier = Modifier.padding(top = 24.dp)
@@ -146,16 +150,16 @@ fun AlertsScreen(
     deleteTarget?.let { item ->
         AlertDialog(
             onDismissRequest = { deleteTarget = null },
-            title = { Text("删除预警") },
-            text = { Text("确定删除「${item.alert.title}」这条预警吗？") },
+            title = { Text(stringResource(R.string.alerts_delete_title)) },
+            text = { Text(stringResource(R.string.alerts_delete_confirm, item.alert.title)) },
             confirmButton = {
                 TextButton(onClick = {
                     viewModel.deleteAlert(item.alert.id)
                     deleteTarget = null
-                }) { Text("删除") }
+                }) { Text(stringResource(R.string.common_delete)) }
             },
             dismissButton = {
-                TextButton(onClick = { deleteTarget = null }) { Text("取消") }
+                TextButton(onClick = { deleteTarget = null }) { Text(stringResource(R.string.common_cancel)) }
             }
         )
     }

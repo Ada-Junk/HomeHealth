@@ -1,18 +1,28 @@
 package com.example.homehealth.ui.components
 
+import android.content.Context
+import android.net.Uri
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.PickVisualMediaRequest
+import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.heightIn
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.AddAPhoto
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.ExposedDropdownMenuBox
 import androidx.compose.material3.ExposedDropdownMenuDefaults
+import androidx.compose.material3.Icon
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -21,20 +31,77 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
+import com.example.homehealth.R
 import com.example.homehealth.data.local.entity.FamilyMember
 import com.example.homehealth.util.DateUtils
+import java.io.File
 
-/** 关系选项（按辈分排序） */
-val RELATIONSHIPS = listOf(
-    "本人", "配偶", "父亲", "母亲", "公公", "婆婆", "岳父", "岳母",
-    "哥哥", "姐姐", "弟弟", "妹妹", "儿子", "女儿", "其他"
-)
-val GENDERS = listOf("男" to "male", "女" to "female", "其他" to "other")
+/** 关系 code（数据库存储值）。旧版本直接存中文，读取时经 [normalize] 归一化 */
+object Relationships {
+    val CODES = listOf(
+        "self", "spouse", "father", "mother", "father_in_law", "mother_in_law",
+        "wife_father", "wife_mother", "elder_brother", "elder_sister",
+        "younger_brother", "younger_sister", "son", "daughter", "other"
+    )
 
-/** 添加 / 编辑家庭成员对话框 */
+    /** 旧版中文存储值 → code */
+    private val legacyZhToCode = mapOf(
+        "本人" to "self", "配偶" to "spouse", "父亲" to "father", "母亲" to "mother",
+        "公公" to "father_in_law", "婆婆" to "mother_in_law",
+        "岳父" to "wife_father", "岳母" to "wife_mother",
+        "哥哥" to "elder_brother", "姐姐" to "elder_sister",
+        "弟弟" to "younger_brother", "妹妹" to "younger_sister",
+        "儿子" to "son", "女儿" to "daughter", "其他" to "other"
+    )
+
+    /** 存储值归一化为 code（已是 code 或未知值则原样返回） */
+    fun normalize(stored: String): String = legacyZhToCode[stored] ?: stored
+}
+
+/** 关系显示名（本地化） */
+@Composable
+fun relationshipLabel(code: String): String = when (Relationships.normalize(code)) {
+    "self" -> stringResource(R.string.rel_self)
+    "spouse" -> stringResource(R.string.rel_spouse)
+    "father" -> stringResource(R.string.rel_father)
+    "mother" -> stringResource(R.string.rel_mother)
+    "father_in_law" -> stringResource(R.string.rel_father_in_law)
+    "mother_in_law" -> stringResource(R.string.rel_mother_in_law)
+    "wife_father" -> stringResource(R.string.rel_wife_father)
+    "wife_mother" -> stringResource(R.string.rel_wife_mother)
+    "elder_brother" -> stringResource(R.string.rel_elder_brother)
+    "elder_sister" -> stringResource(R.string.rel_elder_sister)
+    "younger_brother" -> stringResource(R.string.rel_younger_brother)
+    "younger_sister" -> stringResource(R.string.rel_younger_sister)
+    "son" -> stringResource(R.string.rel_son)
+    "daughter" -> stringResource(R.string.rel_daughter)
+    else -> stringResource(R.string.rel_other)
+}
+
+/** 性别 code → 显示名（本地化） */
+@Composable
+fun genderLabel(code: String?): String = when (code) {
+    "male" -> stringResource(R.string.gender_male)
+    "female" -> stringResource(R.string.gender_female)
+    "other" -> stringResource(R.string.gender_other)
+    else -> ""
+}
+
+/** 成员下拉选项文本：「姓名（关系）」，显示与匹配统一使用本格式 */
+@Composable
+fun memberPickerLabel(name: String, relationship: String): String =
+    stringResource(R.string.member_picker_pattern, name, relationshipLabel(relationship))
+
+/** 性别选项（label ↔ code） */
+val GENDERS = listOf("male" to "male", "female" to "female", "other" to "other")
+
+/** 添加 / 编辑家庭成员对话框（含头像设置） */
 @Composable
 fun MemberEditDialog(
     member: FamilyMember? = null,
@@ -45,63 +112,95 @@ fun MemberEditDialog(
         dateOfBirth: String?,
         gender: String?,
         heightCm: Double?,
-        weightKg: Double?
+        weightKg: Double?,
+        avatarUrl: String?
     ) -> Unit
 ) {
+    val context = LocalContext.current
     var name by remember { mutableStateOf(member?.name ?: "") }
-    var relationship by remember { mutableStateOf(member?.relationship ?: "本人") }
+    var relationship by remember { mutableStateOf(Relationships.normalize(member?.relationship ?: "self")) }
     var dob by remember { mutableStateOf(member?.dateOfBirth ?: "") }
-    var genderLabel by remember { mutableStateOf(
-        GENDERS.firstOrNull { it.second == member?.gender }?.first ?: "男"
-    ) }
+    var genderCode by remember { mutableStateOf(member?.gender ?: "male") }
     var height by remember { mutableStateOf(member?.heightCm?.let { trimNum(it) } ?: "") }
     var weight by remember { mutableStateOf(member?.weightKg?.let { trimNum(it) } ?: "") }
+    var avatarPath by remember { mutableStateOf(member?.avatarUrl ?: "") }
     var nameError by remember { mutableStateOf(false) }
     var dobError by remember { mutableStateOf(false) }
 
+    val pickAvatar = rememberLauncherForActivityResult(
+        ActivityResultContracts.PickVisualMedia()
+    ) { uri ->
+        uri?.let { avatarPath = copyAvatarToPrivate(context, it) }
+    }
+
     // 根据出生日期实时计算年龄（输入合法即显示）
     val ageText = remember(dob) {
-        DateUtils.age(dob.trim())?.let { "$it 岁" }
+        DateUtils.age(dob.trim())?.let { it.toString() }
     }
 
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text(if (member == null) "添加家庭成员" else "编辑成员信息") },
+        title = { Text(if (member == null) stringResource(R.string.member_add_title) else stringResource(R.string.member_edit_title)) },
         text = {
             Column(
                 verticalArrangement = Arrangement.spacedBy(12.dp),
                 modifier = Modifier.verticalScroll(rememberScrollState())
             ) {
+                // 头像：点击选择照片
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(12.dp)
+                ) {
+                    MemberAvatar(
+                        name = name.ifBlank { "?" },
+                        avatarUrl = avatarPath.ifBlank { null },
+                        size = 64
+                    )
+                    TextButton(onClick = {
+                        pickAvatar.launch(
+                            PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly)
+                        )
+                    }) {
+                        Icon(
+                            Icons.Filled.AddAPhoto,
+                            contentDescription = null,
+                            modifier = Modifier.size(18.dp)
+                        )
+                        Text(stringResource(R.string.member_avatar_add))
+                    }
+                }
                 OutlinedTextField(
                     value = name,
                     onValueChange = { name = it; nameError = false },
-                    label = { Text("姓名") },
+                    label = { Text(stringResource(R.string.member_name_label)) },
                     isError = nameError,
-                    supportingText = { if (nameError) Text("请输入姓名") },
+                    supportingText = { if (nameError) Text(stringResource(R.string.member_name_error)) },
                     singleLine = true,
                     modifier = Modifier.fillMaxWidth()
                 )
+                val relOptions = Relationships.CODES.map { it to relationshipLabel(it) }
                 DropdownSelector(
-                    options = RELATIONSHIPS,
-                    selected = relationship,
-                    label = "与我的关系",
-                    onSelect = { relationship = it }
+                    options = relOptions.map { it.second },
+                    selected = relationshipLabel(relationship),
+                    label = stringResource(R.string.member_relationship_label),
+                    onSelect = { label -> relationship = relOptions.first { it.second == label }.first }
                 )
+                val genderOptions = GENDERS.map { it.first to genderLabel(it.first) }
                 DropdownSelector(
-                    options = GENDERS.map { it.first },
-                    selected = genderLabel,
-                    label = "性别",
-                    onSelect = { genderLabel = it }
+                    options = genderOptions.map { it.second },
+                    selected = genderLabel(genderCode),
+                    label = stringResource(R.string.member_gender_label),
+                    onSelect = { label -> genderCode = genderOptions.first { it.second == label }.first }
                 )
                 OutlinedTextField(
                     value = dob,
                     onValueChange = { dob = it; dobError = false },
-                    label = { Text("出生日期（yyyy-MM-dd，可空）") },
+                    label = { Text(stringResource(R.string.member_dob_label)) },
                     isError = dobError,
                     supportingText = {
                         when {
-                            dobError -> Text("日期格式不正确")
-                            ageText != null -> Text("年龄：$ageText（自动计算）")
+                            dobError -> Text(stringResource(R.string.member_dob_error))
+                            ageText != null -> Text(stringResource(R.string.member_age_hint, ageText))
                             else -> Text("")
                         }
                     },
@@ -112,7 +211,7 @@ fun MemberEditDialog(
                     OutlinedTextField(
                         value = height,
                         onValueChange = { height = filterNumber(it) },
-                        label = { Text("身高（cm，可空）") },
+                        label = { Text(stringResource(R.string.member_height_label)) },
                         singleLine = true,
                         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
                         modifier = Modifier.weight(1f)
@@ -120,7 +219,7 @@ fun MemberEditDialog(
                     OutlinedTextField(
                         value = weight,
                         onValueChange = { weight = filterNumber(it) },
-                        label = { Text("体重（kg，可空）") },
+                        label = { Text(stringResource(R.string.member_weight_label)) },
                         singleLine = true,
                         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
                         modifier = Modifier.weight(1f)
@@ -142,17 +241,32 @@ fun MemberEditDialog(
                         trimmedName,
                         relationship,
                         trimmedDob.ifBlank { null },
-                        GENDERS.first { it.first == genderLabel }.second,
+                        genderCode,
                         height.trim().toDoubleOrNull(),
-                        weight.trim().toDoubleOrNull()
+                        weight.trim().toDoubleOrNull(),
+                        avatarPath.ifBlank { null }
                     )
                 }
-            }) { Text("保存") }
+            }) { Text(stringResource(R.string.common_save)) }
         },
         dismissButton = {
-            TextButton(onClick = onDismiss) { Text("取消") }
+            TextButton(onClick = onDismiss) { Text(stringResource(R.string.common_cancel)) }
         }
     )
+}
+
+/** 把选中的头像复制到应用私有目录，返回本地路径（持久可用） */
+private fun copyAvatarToPrivate(context: Context, uri: Uri): String {
+    return try {
+        val dir = File(context.filesDir, "avatars").apply { mkdirs() }
+        val file = File(dir, "avatar_${System.currentTimeMillis()}.jpg")
+        context.contentResolver.openInputStream(uri)?.use { input ->
+            file.outputStream().use { output -> input.copyTo(output) }
+        } ?: return ""
+        file.absolutePath
+    } catch (_: Exception) {
+        ""
+    }
 }
 
 /** 只保留数字与一个小数点 */

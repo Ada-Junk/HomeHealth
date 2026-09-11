@@ -59,7 +59,8 @@ class FamilyListViewModel @Inject constructor(
         dateOfBirth: String?,
         gender: String?,
         heightCm: Double?,
-        weightKg: Double?
+        weightKg: Double?,
+        avatarUrl: String? = null
     ) {
         viewModelScope.launch {
             familyRepository.upsertMember(
@@ -67,6 +68,7 @@ class FamilyListViewModel @Inject constructor(
                     id = UUID.randomUUID().toString(),
                     name = name,
                     relationship = relationship,
+                    avatarUrl = avatarUrl,
                     dateOfBirth = dateOfBirth,
                     gender = gender,
                     heightCm = heightCm,

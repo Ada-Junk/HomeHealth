@@ -77,7 +77,7 @@ class DocumentRepositoryImpl @Inject constructor(
                 "解析服务未配置 API Key，请在「设置 → 报告解析服务」中填写"
             )
         }
-        // LLM 供应商直连（智谱 / OpenAI / Gemini / DeepSeek / Kimi / 通义千问 / Anthropic / 自定义）
+        // LLM 供应商直连（智谱 / OpenAI / Gemini / DeepSeek / Kimi / 通义千问 / Anthropic）
         try {
             val base64 = FileUtils.compressImageToBase64(File(document.filePath))
             val result = llmClient.parseHealthDocument(base64)

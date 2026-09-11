@@ -49,7 +49,7 @@ class QARepositoryImpl @Inject constructor(
 
             val summary = buildRecordsSummary(recordsByType)
 
-            // LLM 供应商直连：智谱 / OpenAI / Gemini / DeepSeek / Kimi / 通义千问 / Anthropic / 自定义（失败回退本地）
+            // LLM 供应商直连：智谱 / OpenAI / Gemini / DeepSeek / Kimi / 通义千问 / Anthropic（失败回退本地）
             if (LlmProviders.isDirect(settingsPrefs.qaProvider) &&
                 llmClient.qaConfigured() && recordsByType.isNotEmpty()
             ) {

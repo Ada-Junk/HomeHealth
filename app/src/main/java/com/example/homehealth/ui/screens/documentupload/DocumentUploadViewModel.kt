@@ -1,9 +1,11 @@
 package com.example.homehealth.ui.screens.documentupload
 
+import android.content.Context
 import android.net.Uri
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.example.homehealth.R
 import com.example.homehealth.data.SettingsPrefs
 import com.example.homehealth.data.local.entity.FamilyMember
 import com.example.homehealth.data.local.entity.HealthRecord
@@ -16,6 +18,7 @@ import com.example.homehealth.util.DateUtils
 import com.example.homehealth.util.HealthTypes
 import com.example.homehealth.util.SchemaNormalizer
 import dagger.hilt.android.lifecycle.HiltViewModel
+import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
@@ -62,6 +65,7 @@ data class UploadUiState(
 @HiltViewModel
 class DocumentUploadViewModel @Inject constructor(
     savedStateHandle: SavedStateHandle,
+    @ApplicationContext private val appContext: Context,
     private val familyRepository: FamilyRepository,
     private val documentRepository: DocumentRepository,
     private val detectAnomalies: DetectAnomaliesUseCase,
@@ -155,7 +159,10 @@ class DocumentUploadViewModel @Inject constructor(
                 parseInternal(document)
             } catch (e: Exception) {
                 internal.update {
-                    it.copy(phase = UploadPhase.ERROR, errorMessage = "图片保存失败：${e.message}")
+                    it.copy(
+                        phase = UploadPhase.ERROR,
+                        errorMessage = appContext.getString(R.string.vm_upload_save_failed, e.message ?: "")
+                    )
                 }
             }
         }
@@ -189,8 +196,8 @@ class DocumentUploadViewModel @Inject constructor(
                 val model = settingsPrefs.parseModel.ifBlank {
                     LlmProviders.byId(provider)?.visionModels?.firstOrNull() ?: ""
                 }
-                if (model.isBlank()) "Vision 大模型 · 视觉理解 + JSON 结构化提取"
-                else "Vision 大模型 $model · 视觉理解 + JSON 结构化提取"
+                if (model.isBlank()) appContext.getString(R.string.upload_engine_vision_default)
+                else appContext.getString(R.string.upload_engine_vision, model)
             }
             else -> ""
         }
@@ -221,13 +228,16 @@ class DocumentUploadViewModel @Inject constructor(
         } catch (t: Throwable) {
             // 捕获 Throwable 而非 Exception：OutOfMemoryError 等错误也转为失败态，避免闪退
             val msg = if (t is OutOfMemoryError) {
-                "内存不足，无法处理该图片，请裁剪后重试"
+                appContext.getString(R.string.vm_upload_oom)
             } else {
-                t.message ?: "未知错误"
+                t.message ?: appContext.getString(R.string.vm_upload_unknown)
             }
             runCatching { documentRepository.markFailed(document, msg) }
             internal.update {
-                it.copy(phase = UploadPhase.ERROR, errorMessage = "解析失败：$msg")
+                it.copy(
+                    phase = UploadPhase.ERROR,
+                    errorMessage = appContext.getString(R.string.vm_upload_parse_failed, msg)
+                )
             }
         }
     }

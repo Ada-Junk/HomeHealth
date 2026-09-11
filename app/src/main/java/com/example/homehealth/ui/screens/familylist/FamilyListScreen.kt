@@ -35,14 +35,17 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.NavHostController
+import com.example.homehealth.R
 import com.example.homehealth.data.local.entity.HealthRecord
 import com.example.homehealth.ui.components.MemberAvatar
 import com.example.homehealth.ui.components.MemberEditDialog
+import com.example.homehealth.ui.components.relationshipLabel
 import com.example.homehealth.ui.navigation.Routes
 import com.example.homehealth.util.DateUtils
 import com.example.homehealth.util.HealthTypes
@@ -60,10 +63,10 @@ fun FamilyListScreen(
     Scaffold(
         topBar = {
             androidx.compose.material3.TopAppBar(
-                title = { Text("家庭健康管家") },
+                title = { Text(stringResource(R.string.family_app_title)) },
                 actions = {
                     IconButton(onClick = { navController.navigate(Routes.SETTINGS) }) {
-                        Icon(Icons.Filled.Settings, contentDescription = "设置")
+                        Icon(Icons.Filled.Settings, contentDescription = stringResource(R.string.nav_settings))
                     }
                 }
             )
@@ -72,7 +75,7 @@ fun FamilyListScreen(
             ExtendedFloatingActionButton(
                 onClick = { showAddDialog = true },
                 icon = { Icon(Icons.Filled.Add, contentDescription = null) },
-                text = { Text("添加成员") }
+                text = { Text(stringResource(R.string.family_add_member)) }
             )
         }
     ) { padding ->
@@ -86,13 +89,13 @@ fun FamilyListScreen(
                 verticalArrangement = Arrangement.Center
             ) {
                 Text(
-                    "还没有家庭成员",
+                    stringResource(R.string.family_empty_title),
                     style = MaterialTheme.typography.titleMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
                 Spacer(Modifier.height(8.dp))
                 Text(
-                    "添加家庭成员后即可建立健康档案",
+                    stringResource(R.string.family_empty_desc),
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
@@ -120,8 +123,8 @@ fun FamilyListScreen(
     if (showAddDialog) {
         MemberEditDialog(
             onDismiss = { showAddDialog = false },
-            onSave = { name, relationship, dob, gender, heightCm, weightKg ->
-                viewModel.addMember(name, relationship, dob, gender, heightCm, weightKg)
+            onSave = { name, relationship, dob, gender, heightCm, weightKg, avatarUrl ->
+                viewModel.addMember(name, relationship, dob, gender, heightCm, weightKg, avatarUrl)
                 showAddDialog = false
             }
         )
@@ -139,7 +142,7 @@ private fun MemberCard(card: MemberCardUi, onClick: () -> Unit) {
             modifier = Modifier.padding(16.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            MemberAvatar(name = card.member.name, size = 52)
+            MemberAvatar(name = card.member.name, avatarUrl = card.member.avatarUrl, size = 52)
             Column(
                 modifier = Modifier
                     .weight(1f)
@@ -151,11 +154,13 @@ private fun MemberCard(card: MemberCardUi, onClick: () -> Unit) {
                         style = MaterialTheme.typography.titleMedium
                     )
                     Spacer(Modifier.size(8.dp))
+                    val ageText = DateUtils.age(card.member.dateOfBirth)
+                        ?.let { stringResource(R.string.age_suffix, it) }
                     Text(
-                        text = buildString {
-                            append(card.member.relationship)
-                            DateUtils.age(card.member.dateOfBirth)?.let { append(" · $it 岁") }
-                        },
+                        text = listOfNotNull(
+                            relationshipLabel(card.member.relationship),
+                            ageText
+                        ).joinToString(" · "),
                         style = MaterialTheme.typography.bodyMedium,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
@@ -183,8 +188,9 @@ private fun MemberCard(card: MemberCardUi, onClick: () -> Unit) {
 }
 
 /** 最近指标摘要行：展示最近记录的任意指标（不限血压/血糖/体重） */
+@Composable
 private fun latestSummary(latestByType: Map<String, HealthRecord>): String {
-    if (latestByType.isEmpty()) return "暂无健康记录，上传报告开始管理"
+    if (latestByType.isEmpty()) return stringResource(R.string.family_no_records)
     // 常见指标优先展示，其余按记录日期取最近的补足 3 项
     val priority = listOf(HealthTypes.BLOOD_PRESSURE, HealthTypes.BLOOD_GLUCOSE, HealthTypes.WEIGHT)
     val ordered = latestByType.entries.sortedWith(
@@ -195,7 +201,7 @@ private fun latestSummary(latestByType: Map<String, HealthRecord>): String {
     )
     val parts = ordered.take(3).map { (type, r) ->
         val unit = r.unit.trim().takeIf { it.isNotBlank() }?.let { " $it" } ?: ""
-        "${HealthTypes.label(type)} ${r.value}$unit"
+        "${stringResource(HealthTypes.labelRes(type))} ${r.value}$unit"
     }
-    return "最近：" + parts.joinToString("  ·  ")
+    return stringResource(R.string.family_recent_prefix) + parts.joinToString("  ·  ")
 }

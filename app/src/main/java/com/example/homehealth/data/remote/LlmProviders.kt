@@ -26,7 +26,6 @@ data class LlmProvider(
 object LlmProviders {
 
     const val LOCAL = "local"        // 本地模式
-    const val CUSTOM = "custom"      // 自定义 OpenAI 兼容服务
 
     /** OpenAI 兼容 chat/completions 协议 */
     const val PROTOCOL_OPENAI = "openai"
@@ -34,7 +33,7 @@ object LlmProviders {
     /** Anthropic Messages API（/v1/messages）协议 */
     const val PROTOCOL_ANTHROPIC = "anthropic"
 
-    /** 是否为「供应商直连」模式（预设 LLM 供应商 / 自定义 OpenAI 兼容服务），走 LlmClient */
+    /** 是否为「供应商直连」模式（预设 LLM 供应商），走 LlmClient */
     fun isDirect(id: String): Boolean = id != LOCAL
 
     // ---------- 智谱 GLM（open.bigmodel.cn）----------
@@ -52,6 +51,7 @@ object LlmProviders {
             "glm-4v-flash"
         ),
         chatModels = listOf(
+            "glm-5.3-flash",
             "glm-5.3",
             "glm-5.2",
             "glm-5.1",
@@ -61,21 +61,17 @@ object LlmProviders {
             "glm-4.6",
             "glm-4.5-air",
             "glm-4.5-airx",
-            "glm-4.5-flash",
-            "glm-4-plus",
-            "glm-4-air-250414",
-            "glm-4-airx",
-            "glm-4-flashx-250414",
-            "glm-4-flash-250414"
+            "glm-4.5-flash"
         ),
         keyHint = "在 open.bigmodel.cn 的「API Keys」页面创建",
-        note = "flash 系列模型免费；glm-4.5 / glm-4.5-x 官方已建议迁移至 glm-4.7"
+        note = "请区分视觉模型和大语言模型"
     )
 
     // ---------- OpenAI（platform.openai.com）----------
     // 官方说明：现行 GPT 系列全部型号原生支持文本 + 图片输入，视觉 / 文本列表一致
 
     private val OPENAI_MODELS = listOf(
+        "gpt-5.6-astra",
         "gpt-5.6-sol",        // 旗舰推理
         "gpt-5.6-terra",      // 均衡
         "gpt-5.6-luna",       // 低成本高吞吐
@@ -87,11 +83,7 @@ object LlmProviders {
         "gpt-5.3-chat-latest",
         "gpt-5.2",
         "gpt-5-mini",
-        "gpt-5-nano",
-        "gpt-4.1",
-        "gpt-4.1-mini",
-        "gpt-4o",
-        "gpt-4o-mini"
+        "gpt-5-nano"
     )
 
     val OPENAI = LlmProvider(
@@ -108,6 +100,7 @@ object LlmProviders {
     // 全系多模态，视觉 / 文本列表一致
 
     private val GEMINI_MODELS = listOf(
+        "gemini-3.8-flash",
         "gemini-3.7-flash",
         "gemini-3.6-flash",
         "gemini-3.5-flash",
@@ -138,14 +131,15 @@ object LlmProviders {
         name = "DeepSeek",
         baseUrl = "https://api.deepseek.com/",
         visionModels = listOf(
-            "deepseek-v4-flash-vision-exp"  // 实验性视觉模型（2026-08-21 上线）
+            "deepseek-flash"  // 实验性视觉模型（2026-08-21 上线）
         ),
         chatModels = listOf(
+            "deepseek-flash",
             "deepseek-v4-pro",
             "deepseek-v4-flash"
         ),
         keyHint = "在 platform.deepseek.com 的「API Keys」页面创建",
-        note = "旧模型名 deepseek-chat / deepseek-reasoner 已于 2026-07 停用；视觉模型为实验版"
+        note = "deepseek-flash支持多模态"
     )
 
     // ---------- Kimi 月之暗面（platform.moonshot.cn）----------
@@ -227,19 +221,9 @@ object LlmProviders {
         protocol = PROTOCOL_ANTHROPIC
     )
 
-    val CUSTOM_PROVIDER = LlmProvider(
-        id = CUSTOM,
-        name = "自定义（OpenAI 兼容）",
-        baseUrl = "",
-        visionModels = emptyList(),
-        chatModels = emptyList(),
-        keyHint = "填入服务的 OpenAI 兼容地址（如 http://192.168.1.10:11434/v1/）",
-        note = "适用于 Ollama、vLLM 等任何 OpenAI 兼容服务，视觉 / 文本模型自行填写"
-    )
-
     /** 全部供应商（本地为伪供应商，只用于 UI 展示与分流） */
     val ALL: List<LlmProvider> = listOf(
-        ZHIPU, OPENAI, GEMINI, DEEPSEEK, KIMI, QWEN, ANTHROPIC, CUSTOM_PROVIDER
+        ZHIPU, OPENAI, GEMINI, DEEPSEEK, KIMI, QWEN, ANTHROPIC
     )
 
     fun byId(id: String): LlmProvider? = ALL.firstOrNull { it.id == id }

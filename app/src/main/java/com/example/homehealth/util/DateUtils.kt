@@ -35,8 +35,8 @@ object DateUtils {
         return null
     }
 
-    /** 相对时间：今天 / 昨天 / N天前 */
-    fun relative(timestamp: Long): String {
+    /** 相对时间：今天 / 昨天 / N天前（english=true 时返回英文，供 UI 本地化显示） */
+    fun relative(timestamp: Long, english: Boolean = false): String {
         val now = Calendar.getInstance()
         val target = Calendar.getInstance().apply { timeInMillis = timestamp }
         val todayStart = Calendar.getInstance().apply {
@@ -49,9 +49,9 @@ object DateUtils {
                     set(Calendar.SECOND, 0); set(Calendar.MILLISECOND, 0)
                 }.timeInMillis)) / (24 * 3600 * 1000L)).toInt()
         return when {
-            diffDays <= 0 -> "今天"
-            diffDays == 1 -> "昨天"
-            diffDays in 2..30 -> "${diffDays}天前"
+            diffDays <= 0 -> if (english) "Today" else "今天"
+            diffDays == 1 -> if (english) "Yesterday" else "昨天"
+            diffDays in 2..30 -> if (english) "$diffDays days ago" else "${diffDays}天前"
             else -> formatDate(timestamp)
         }
     }

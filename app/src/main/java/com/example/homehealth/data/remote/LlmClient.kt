@@ -73,26 +73,19 @@ class LlmClient @Inject constructor(
         val provider = if (vision) settingsPrefs.parseProvider else settingsPrefs.qaProvider
         val apiKey = (if (vision) settingsPrefs.parseApiKey else settingsPrefs.qaApiKey).trim()
         val customModel = if (vision) settingsPrefs.parseModel else settingsPrefs.qaModel
-        val customBaseUrl = if (vision) settingsPrefs.parseBaseUrl else settingsPrefs.qaBaseUrl
 
         val preset = LlmProviders.byId(provider)
-        val baseUrl = (preset?.baseUrl ?: customBaseUrl).ifBlank { customBaseUrl }
+            ?: throw IllegalStateException("服务供应商配置无效，请在「设置」中重新选择")
         val model = customModel.ifBlank {
-            if (vision) preset?.visionModels?.firstOrNull() else preset?.chatModels?.firstOrNull()
-        } ?: customModel
+            if (vision) preset.visionModels.firstOrNull() else preset.chatModels.firstOrNull()
+        }.orEmpty()
 
-        if (baseUrl.isBlank()) {
-            throw IllegalStateException("服务地址为空，请在「设置」中填写")
-        }
-        if (model.isBlank()) {
-            throw IllegalStateException("模型名称为空，请在「设置」中选择或填写")
-        }
         if (apiKey.isBlank()) {
             throw IllegalStateException("API Key 未填写，请在「设置」中配置")
         }
 
-        // 视觉 / 文本模型区分校验（自定义服务无法预判能力，跳过）
-        if (vision && preset != null && preset.id != LlmProviders.CUSTOM) {
+        // 视觉 / 文本模型区分校验：纯文本模型无法识别报告图片
+        if (vision) {
             if (preset.visionModels.isEmpty()) {
                 throw IllegalStateException(
                     "「${preset.name}」没有可用的视觉模型，请在「报告解析服务」中更换供应商"
@@ -106,10 +99,10 @@ class LlmClient @Inject constructor(
         }
 
         return ResolvedConfig(
-            baseUrl = baseUrl,
+            baseUrl = preset.baseUrl,
             apiKey = apiKey,
             model = model,
-            protocol = preset?.protocol ?: LlmProviders.PROTOCOL_OPENAI
+            protocol = preset.protocol
         )
     }
 

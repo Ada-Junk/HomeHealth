@@ -1,0 +1,323 @@
+<resources>
+    <string name="app_name">Family Health Manager</string>
+    <string name="channel_medication">Medication Reminders</string>
+    <string name="channel_health">Health Alerts</string>
+
+    <!-- Common -->
+    <string name="common_save">Save</string>
+    <string name="common_cancel">Cancel</string>
+    <string name="common_delete">Delete</string>
+    <string name="common_edit">Edit</string>
+    <string name="common_back">Back</string>
+    <string name="common_confirm">OK</string>
+    <string name="common_retry">Retry</string>
+
+    <!-- Bottom navigation -->
+    <string name="nav_family">Family</string>
+    <string name="nav_alerts">Alerts</string>
+    <string name="nav_reminders">Reminders</string>
+    <string name="nav_qa">Q&amp;A</string>
+    <string name="nav_settings">Settings</string>
+
+    <!-- Family list -->
+    <string name="family_app_title">Family Health Manager</string>
+    <string name="family_add_member">Add Member</string>
+    <string name="family_empty_title">No family members yet</string>
+    <string name="family_empty_desc">Add a family member to start their health profile</string>
+    <string name="family_no_records">No health records yet. Upload a report to get started</string>
+    <string name="family_recent_prefix">Recent: </string>
+    <string name="family_avatar_cd">Member photo</string>
+
+    <!-- Member edit dialog -->
+    <string name="member_add_title">Add Family Member</string>
+    <string name="member_edit_title">Edit Member</string>
+    <string name="member_name_label">Name</string>
+    <string name="member_name_error">Please enter a name</string>
+    <string name="member_relationship_label">Relationship</string>
+    <string name="member_gender_label">Gender</string>
+    <string name="member_dob_label">Date of birth (yyyy-MM-dd, optional)</string>
+    <string name="member_dob_error">Invalid date format</string>
+    <string name="member_age_hint">Age: %1$s (auto)</string>
+    <string name="member_height_label">Height (cm, optional)</string>
+    <string name="member_weight_label">Weight (kg, optional)</string>
+    <string name="member_avatar_add">Set photo</string>
+    <string name="gender_male">Male</string>
+    <string name="gender_female">Female</string>
+    <string name="gender_other">Other</string>
+
+    <!-- Member detail -->
+    <string name="detail_title_default">Health Profile</string>
+    <string name="detail_edit_cd">Edit profile</string>
+    <string name="detail_alerts_cd">Alerts</string>
+    <string name="detail_upload_report">Upload Report</string>
+    <string name="detail_metrics_header">Health Metrics</string>
+    <string name="detail_add_metric">Add Metric</string>
+    <string name="detail_metrics_empty">No records yet. Tap "Upload Report" to parse a medical report, or "Add Metric" to enter one manually.</string>
+    <string name="detail_recent_header">Recent Records</string>
+    <string name="detail_unread_alerts">%1$d unread health alerts. Tap to view</string>
+    <string name="detail_record_count">%1$d records</string>
+    <string name="detail_reference">Ref %1$s</string>
+    <string name="detail_from_report">From report</string>
+    <string name="detail_manual">Manual</string>
+    <string name="age_suffix">%1$d yr old</string>
+
+    <!-- Record input dialog -->
+    <string name="record_edit_title">Edit %1$s Record</string>
+    <string name="record_add_typed_title">Add %1$s Record</string>
+    <string name="record_add_generic_title">Add Health Metric</string>
+    <string name="record_type_label">Metric type</string>
+    <string name="record_systolic">Systolic</string>
+    <string name="record_diastolic">Diastolic</string>
+    <string name="record_value_unit">Value (%1$s)</string>
+    <string name="record_measure_date">Date: %1$s</string>
+    <string name="record_notes_label">Notes (optional)</string>
+    <string name="record_invalid_value">Enter a valid value</string>
+
+    <!-- Record detail -->
+    <string name="record_detail_trend">Trend</string>
+    <string name="record_detail_no_data">No data</string>
+    <string name="stat_latest">Latest</string>
+    <string name="stat_average">Avg</string>
+    <string name="stat_highest">High</string>
+    <string name="stat_lowest">Low</string>
+    <string name="record_reference_range">Reference: %1$s</string>
+    <string name="record_all_records">All Records (%1$d)</string>
+    <string name="record_delete_title">Delete Record</string>
+    <string name="record_delete_confirm">Delete the record (%2$s) from %1$s?</string>
+    <string name="record_add_cd">Add record manually</string>
+
+    <!-- Alerts -->
+    <string name="alerts_title">Alert Center</string>
+    <string name="alerts_run_now_cd">Detect now</string>
+    <string name="alerts_mark_all_read_cd">Mark all read</string>
+    <string name="alerts_detected_new">Done. %1$d new alerts found</string>
+    <string name="alerts_detected_none">Done. No new abnormalities</string>
+    <string name="alerts_filter_all">All (%1$d)</string>
+    <string name="alerts_filter_unread">Unread (%1$d)</string>
+    <string name="alerts_no_unread">No unread alerts</string>
+    <string name="alerts_empty">No alerts. Upload a report or tap "Detect now" to analyze health data.</string>
+    <string name="alerts_delete_title">Delete Alert</string>
+    <string name="alerts_delete_confirm">Delete the alert "%1$s"?</string>
+    <string name="severity_high">High</string>
+    <string name="severity_medium">Medium</string>
+    <string name="severity_low">Info</string>
+
+    <!-- Parse status -->
+    <string name="parse_status_pending">Pending</string>
+    <string name="parse_status_processing">Processing</string>
+    <string name="parse_status_completed">Done</string>
+    <string name="parse_status_failed">Failed</string>
+
+    <!-- Upload -->
+    <string name="upload_title">Upload Report</string>
+    <string name="upload_archive_member">Member</string>
+    <string name="upload_image_cd">Report image</string>
+    <string name="upload_placeholder">Take or pick a photo of the medical report</string>
+    <string name="upload_take_photo">Camera</string>
+    <string name="upload_pick_photo">Gallery</string>
+    <string name="upload_saving">Saving image…</string>
+    <string name="upload_parsing">Parsing report…</string>
+    <string name="upload_confirming">Saving records…</string>
+    <string name="upload_result_title">Results (review before saving)</string>
+    <string name="upload_engine_vision">Vision model %1$s · Visual understanding + JSON extraction</string>
+    <string name="upload_engine_vision_default">Vision model · Visual understanding + JSON extraction</string>
+    <string name="upload_engine_fallback">Structured extraction</string>
+    <string name="upload_normalized_count">, %1$d units normalized</string>
+    <string name="upload_normalized_default">, units normalized per standard dictionary</string>
+    <string name="upload_count_summary">%1$s · %2$d metrics extracted%3$s</string>
+    <string name="upload_confirm_save">Save %1$d Records</string>
+    <string name="upload_show_raw">View raw text</string>
+    <string name="upload_hide_raw">Hide raw text</string>
+    <string name="upload_history">History</string>
+    <string name="upload_reparse">Re-parse</string>
+    <string name="upload_saved_done">Records saved. Anomaly detection completed.</string>
+    <string name="upload_metric_label">Metric</string>
+    <string name="upload_value_label">Value</string>
+    <string name="upload_unit_label">Unit</string>
+    <string name="upload_date_label">Date (yyyy-MM-dd)</string>
+    <string name="upload_normalized_note">Normalized: %1$s</string>
+    <string name="vm_upload_save_failed">Failed to save image: %1$s</string>
+    <string name="vm_upload_oom">Not enough memory to process this image. Please crop it and retry</string>
+    <string name="vm_upload_unknown">Unknown error</string>
+    <string name="vm_upload_parse_failed">Parsing failed: %1$s</string>
+
+    <!-- Reminders -->
+    <string name="reminders_title">Medication Reminders</string>
+    <string name="reminders_add_cd">Add reminder</string>
+    <string name="reminders_empty_title">No medication reminders</string>
+    <string name="reminders_empty_desc">Tap + at the bottom right to add medication and times</string>
+    <string name="reminders_delete_title">Delete Reminder</string>
+    <string name="reminders_delete_confirm">Delete reminders for "%1$s"? Calendar events will also be removed.</string>
+    <string name="reminders_enabled">On</string>
+    <string name="reminders_disabled">Off</string>
+    <string name="reminders_since">From %1$s · Daily</string>
+    <string name="reminders_write_calendar">Add to Calendar</string>
+    <string name="reminders_calendar_denied">Calendar permission denied. Cannot write</string>
+    <string name="reminders_calendar_invalid">Failed: invalid time format</string>
+    <string name="reminders_calendar_updated">existing events updated</string>
+    <string name="reminders_calendar_new">daily reminder</string>
+    <string name="reminders_calendar_done">Added to calendar: %1$s (%2$d times · %3$s)</string>
+    <string name="reminders_calendar_failed">Failed to write calendar: %1$s</string>
+    <string name="reminders_add_title">Add Medication Reminder</string>
+    <string name="reminders_edit_title">Edit Medication Reminder</string>
+    <string name="reminders_member_label">Member</string>
+    <string name="reminders_med_name">Medication name</string>
+    <string name="reminders_dosage">Dosage (e.g. 5mg × 1)</string>
+    <string name="reminders_times">Daily times (comma-separated)</string>
+    <string name="reminders_times_hint">Format: HH:mm, e.g. 08:00, 20:00</string>
+    <string name="reminders_form_error">Enter the medication name and times in HH:mm format</string>
+    <string name="reminders_default_dosage">As directed</string>
+
+    <!-- Q&A -->
+    <string name="qa_title">Health Q&amp;A</string>
+    <string name="qa_member_label">Ask about</string>
+    <string name="qa_disclaimer">Answers are generated from saved health records, for reference only. Not medical advice.</string>
+    <string name="qa_empty_members">Add a family member first</string>
+    <string name="qa_try_ask">Try asking: "How is my blood pressure lately?"</string>
+    <string name="qa_analyzing">Analyzing health records…</string>
+    <string name="qa_input_hint">Type a health question…</string>
+    <string name="qa_send_cd">Send</string>
+    <string name="qa_sources">Sources:\n%1$s</string>
+    <string name="qa_thinking_show">Show reasoning</string>
+    <string name="qa_thinking_hide">Hide reasoning</string>
+    <string name="vm_qa_failed">Failed to generate an answer: %1$s</string>
+    <string name="member_picker_pattern">%1$s (%2$s)</string>
+
+    <!-- Settings -->
+    <string name="settings_title">Settings</string>
+    <string name="settings_member_section">Family Members</string>
+    <string name="settings_add_member">Add Family Member</string>
+    <string name="settings_export_share_title">Export health data</string>
+    <string name="settings_export">Export All Data (JSON)</string>
+    <string name="settings_export_desc">Exports members, health records, alerts, medication reminders and Q&amp;A history via system share.</string>
+    <string name="settings_check_section">Health Check</string>
+    <string name="settings_check_now">Run Health Check Now</string>
+    <string name="settings_check_desc">A health check sends today\'s medication notifications and runs anomaly detection for all members. It also runs automatically daily at 8:00.</string>
+    <string name="settings_check_enqueued">Health check enqueued. You will be notified of the result</string>
+    <string name="settings_about_section">About</string>
+    <string name="settings_app_version">Family Health Manager v1.0.0</string>
+    <string name="settings_privacy">Privacy: all health data is stored only in the app\'s private storage on this device and never uploaded to the cloud (unless you enable a remote parsing service). Uninstalling the app deletes all data.</string>
+    <string name="settings_delete_member_title">Delete Member</string>
+    <string name="settings_delete_member_confirm">Deleting "%1$s" also deletes all their health records, alerts, reminders and Q&amp;A history. This cannot be undone. Delete anyway?</string>
+
+    <!-- Settings: appearance -->
+    <string name="settings_theme_section">Appearance</string>
+    <string name="settings_theme_system">Follow System</string>
+    <string name="settings_theme_system_desc">Light / dark switches with system setting</string>
+    <string name="settings_theme_light">Light Mode</string>
+    <string name="settings_theme_light_desc">Always use the bright theme</string>
+    <string name="settings_theme_dark">Dark Mode</string>
+    <string name="settings_theme_dark_desc">Always use the eye-friendly dark theme</string>
+
+    <!-- Settings: language -->
+    <string name="settings_data_section">Data</string>
+    <string name="settings_language_section">Language</string>
+    <string name="settings_language_system">Follow System</string>
+    <string name="settings_language_system_desc">Chinese / English follows system setting</string>
+    <string name="settings_language_zh">中文</string>
+    <string name="settings_language_zh_desc">Always display Chinese</string>
+    <string name="settings_language_en">English</string>
+    <string name="settings_language_en_desc">Always display English</string>
+
+    <!-- Settings: services -->
+    <string name="settings_parse_section">Report Parsing Service</string>
+    <string name="settings_parse_desc">After uploading a medical report, a vision LLM recognizes and extracts health metrics (blood count, liver &amp; kidney function, vitamins and more)</string>
+    <string name="settings_qa_section">Health Q&amp;A Service</string>
+    <string name="settings_qa_desc">When you ask a question, a text LLM answers based on the member\'s health records; falls back to local analysis if unavailable</string>
+    <string name="provider_local">Local Mode</string>
+    <string name="provider_local_vision_desc">Offline. Reports cannot be parsed; enter metrics manually</string>
+    <string name="provider_local_qa_desc">Offline. Analyzes saved records with local rules</string>
+    <string name="settings_vision_model_label">Vision model (for parsing)</string>
+    <string name="settings_text_model_label">Text model (for Q&amp;A)</string>
+    <string name="settings_model_default">Default (%1$s)</string>
+    <string name="settings_key_show">Show</string>
+    <string name="settings_key_hide">Hide</string>
+
+    <!-- Member picker -->
+    <string name="picker_member_label">Member</string>
+
+    <!-- Relationships -->
+    <string name="rel_self">Self</string>
+    <string name="rel_spouse">Spouse</string>
+    <string name="rel_father">Father</string>
+    <string name="rel_mother">Mother</string>
+    <string name="rel_father_in_law">Father-in-law</string>
+    <string name="rel_mother_in_law">Mother-in-law</string>
+    <string name="rel_wife_father">Father-in-law</string>
+    <string name="rel_wife_mother">Mother-in-law</string>
+    <string name="rel_elder_brother">Elder Brother</string>
+    <string name="rel_elder_sister">Elder Sister</string>
+    <string name="rel_younger_brother">Younger Brother</string>
+    <string name="rel_younger_sister">Younger Sister</string>
+    <string name="rel_son">Son</string>
+    <string name="rel_daughter">Daughter</string>
+    <string name="rel_other">Other</string>
+
+    <!-- Relative time -->
+    <string name="time_today">Today</string>
+    <string name="time_yesterday">Yesterday</string>
+    <string name="time_days_ago">%1$d days ago</string>
+
+    <!-- Metric groups -->
+    <string name="group_vitals">Vitals</string>
+    <string name="group_glucose">Glucose</string>
+    <string name="group_lipids">Lipids</string>
+    <string name="group_cbc">Blood Count</string>
+    <string name="group_liver">Liver</string>
+    <string name="group_kidney">Kidney</string>
+    <string name="group_thyroid">Thyroid</string>
+    <string name="group_vitamins">Vitamins &amp; Trace Elements</string>
+    <string name="group_electrolytes">Electrolytes</string>
+    <string name="group_others">Others</string>
+
+    <!-- Metric names -->
+    <string name="metric_blood_pressure">Blood Pressure</string>
+    <string name="metric_heart_rate">Heart Rate</string>
+    <string name="metric_weight">Weight</string>
+    <string name="metric_height">Height</string>
+    <string name="metric_bmi">BMI</string>
+    <string name="metric_body_fat">Body Fat %</string>
+    <string name="metric_waist_circumference">Waist Circumference</string>
+    <string name="metric_body_temperature">Body Temperature</string>
+    <string name="metric_spo2">SpO2</string>
+    <string name="metric_blood_glucose">Fasting Glucose</string>
+    <string name="metric_postprandial_glucose">2h Postprandial Glucose</string>
+    <string name="metric_hba1c">HbA1c</string>
+    <string name="metric_total_cholesterol">Total Cholesterol</string>
+    <string name="metric_triglycerides">Triglycerides</string>
+    <string name="metric_hdl">HDL</string>
+    <string name="metric_ldl">LDL</string>
+    <string name="metric_wbc">WBC</string>
+    <string name="metric_rbc">RBC</string>
+    <string name="metric_hemoglobin">Hemoglobin</string>
+    <string name="metric_hematocrit">Hematocrit</string>
+    <string name="metric_mcv">MCV</string>
+    <string name="metric_platelets">Platelets</string>
+    <string name="metric_neutrophil_ratio">Neutrophil %</string>
+    <string name="metric_lymphocyte_ratio">Lymphocyte %</string>
+    <string name="metric_alt">ALT</string>
+    <string name="metric_ast">AST</string>
+    <string name="metric_ggt">GGT</string>
+    <string name="metric_total_bilirubin">Total Bilirubin</string>
+    <string name="metric_albumin">Albumin</string>
+    <string name="metric_creatinine">Creatinine</string>
+    <string name="metric_urea_nitrogen">Urea Nitrogen</string>
+    <string name="metric_uric_acid">Uric Acid</string>
+    <string name="metric_tsh">TSH</string>
+    <string name="metric_ft3">FT3</string>
+    <string name="metric_ft4">FT4</string>
+    <string name="metric_vitamin_a">Vitamin A</string>
+    <string name="metric_vitamin_b1">Vitamin B1</string>
+    <string name="metric_vitamin_b6">Vitamin B6</string>
+    <string name="metric_folate">Folate</string>
+    <string name="metric_vitamin_b12">Vitamin B12</string>
+    <string name="metric_vitamin_c">Vitamin C</string>
+    <string name="metric_vitamin_d">25-OH Vitamin D</string>
+    <string name="metric_vitamin_e">Vitamin E</string>
+    <string name="metric_serum_iron">Serum Iron</string>
+    <string name="metric_potassium">Potassium</string>
+    <string name="metric_sodium">Sodium</string>
+    <string name="metric_chloride">Chloride</string>
+    <string name="metric_calcium">Calcium</string>
+    <string name="metric_bone_density_t">Bone Density T-score</string>
+</resources>

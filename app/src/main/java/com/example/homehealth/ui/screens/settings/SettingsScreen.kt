@@ -42,16 +42,19 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.NavHostController
+import com.example.homehealth.R
 import com.example.homehealth.data.SettingsPrefs
 import com.example.homehealth.data.local.entity.FamilyMember
 import com.example.homehealth.data.remote.LlmProviders
 import com.example.homehealth.ui.components.DropdownSelector
 import com.example.homehealth.ui.components.MemberEditDialog
+import com.example.homehealth.ui.components.relationshipLabel
 import com.example.homehealth.util.DateUtils
 import com.example.homehealth.util.FileUtils
 
@@ -67,12 +70,11 @@ fun SettingsScreen(
     val parseProvider by viewModel.parseProvider.collectAsStateWithLifecycle()
     val parseApiKey by viewModel.parseApiKey.collectAsStateWithLifecycle()
     val parseModel by viewModel.parseModel.collectAsStateWithLifecycle()
-    val parseBaseUrl by viewModel.parseBaseUrl.collectAsStateWithLifecycle()
     val qaProvider by viewModel.qaProvider.collectAsStateWithLifecycle()
     val qaApiKey by viewModel.qaApiKey.collectAsStateWithLifecycle()
     val qaModel by viewModel.qaModel.collectAsStateWithLifecycle()
-    val qaBaseUrl by viewModel.qaBaseUrl.collectAsStateWithLifecycle()
     val themeMode by viewModel.themeMode.collectAsStateWithLifecycle()
+    val languageMode by viewModel.languageMode.collectAsStateWithLifecycle()
     val snackbarHostState = remember { SnackbarHostState() }
 
     var showAddMember by remember { mutableStateOf(false) }
@@ -88,7 +90,7 @@ fun SettingsScreen(
                         context = context,
                         file = event.file,
                         mime = "application/json",
-                        title = "导出健康数据"
+                        title = context.getString(R.string.settings_export_share_title)
                     )
                 }
                 is SettingsEvent.CheckEnqueued -> snackbarHostState.showSnackbar(event.message)
@@ -97,7 +99,7 @@ fun SettingsScreen(
     }
 
     Scaffold(
-        topBar = { androidx.compose.material3.TopAppBar(title = { Text("设置") }) },
+        topBar = { androidx.compose.material3.TopAppBar(title = { Text(stringResource(R.string.settings_title)) }) },
         snackbarHost = { SnackbarHost(snackbarHostState) }
     ) { padding ->
         LazyColumn(
@@ -109,7 +111,7 @@ fun SettingsScreen(
         ) {
             // ---- 家庭成员管理 ----
             item {
-                SectionTitle("家庭成员管理")
+                SectionTitle(stringResource(R.string.settings_member_section))
             }
             items(members, key = { it.id }) { member ->
                 Card(modifier = Modifier.fillMaxWidth()) {
@@ -117,13 +119,24 @@ fun SettingsScreen(
                         modifier = Modifier.padding(horizontal = 14.dp, vertical = 8.dp),
                         verticalAlignment = Alignment.CenterVertically
                     ) {
-                        Column(modifier = Modifier.weight(1f)) {
+                        com.example.homehealth.ui.components.MemberAvatar(
+                            name = member.name,
+                            avatarUrl = member.avatarUrl,
+                            size = 40
+                        )
+                        Column(
+                            modifier = Modifier
+                                .weight(1f)
+                                .padding(start = 12.dp)
+                        ) {
                             Text(member.name, style = MaterialTheme.typography.bodyLarge)
+                            val ageText = DateUtils.age(member.dateOfBirth)
+                                ?.let { stringResource(R.string.age_suffix, it) }
                             Text(
-                                text = buildString {
-                                    append(member.relationship)
-                                    DateUtils.age(member.dateOfBirth)?.let { append(" · $it 岁") }
-                                },
+                                text = listOfNotNull(
+                                    relationshipLabel(member.relationship),
+                                    ageText
+                                ).joinToString(" · "),
                                 style = MaterialTheme.typography.labelMedium,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant
                             )
@@ -131,14 +144,14 @@ fun SettingsScreen(
                         IconButton(onClick = { editTarget = member }) {
                             Icon(
                                 Icons.Filled.Edit,
-                                contentDescription = "编辑",
+                                contentDescription = stringResource(R.string.common_edit),
                                 tint = MaterialTheme.colorScheme.onSurfaceVariant
                             )
                         }
                         IconButton(onClick = { deleteTarget = member }) {
                             Icon(
                                 Icons.Filled.Delete,
-                                contentDescription = "删除",
+                                contentDescription = stringResource(R.string.common_delete),
                                 tint = MaterialTheme.colorScheme.onSurfaceVariant
                             )
                         }
@@ -148,91 +161,116 @@ fun SettingsScreen(
             item {
                 OutlinedButton(onClick = { showAddMember = true }) {
                     Icon(Icons.Filled.Add, contentDescription = null, modifier = Modifier.padding(end = 6.dp))
-                    Text("添加家庭成员")
+                    Text(stringResource(R.string.settings_add_member))
                 }
             }
 
             // ---- 外观 ----
             item {
-                SectionTitle("外观")
+                SectionTitle(stringResource(R.string.settings_theme_section))
             }
             item {
                 ModeOptionCard(
-                    title = "跟随系统",
-                    desc = "浅色 / 深色随系统设置自动切换",
+                    title = stringResource(R.string.settings_theme_system),
+                    desc = stringResource(R.string.settings_theme_system_desc),
                     selected = themeMode == SettingsPrefs.THEME_SYSTEM,
                     onClick = { viewModel.setThemeMode(SettingsPrefs.THEME_SYSTEM) }
                 )
             }
             item {
                 ModeOptionCard(
-                    title = "浅色模式",
-                    desc = "始终使用明亮的白色主题",
+                    title = stringResource(R.string.settings_theme_light),
+                    desc = stringResource(R.string.settings_theme_light_desc),
                     selected = themeMode == SettingsPrefs.THEME_LIGHT,
                     onClick = { viewModel.setThemeMode(SettingsPrefs.THEME_LIGHT) }
                 )
             }
             item {
                 ModeOptionCard(
-                    title = "深色模式",
-                    desc = "始终使用护眼的暗色主题",
+                    title = stringResource(R.string.settings_theme_dark),
+                    desc = stringResource(R.string.settings_theme_dark_desc),
                     selected = themeMode == SettingsPrefs.THEME_DARK,
                     onClick = { viewModel.setThemeMode(SettingsPrefs.THEME_DARK) }
                 )
             }
 
+            // ---- 语言 ----
+            item {
+                SectionTitle(stringResource(R.string.settings_language_section))
+            }
+            item {
+                ModeOptionCard(
+                    title = stringResource(R.string.settings_language_system),
+                    desc = stringResource(R.string.settings_language_system_desc),
+                    selected = languageMode == SettingsPrefs.LANGUAGE_SYSTEM,
+                    onClick = { viewModel.setLanguageMode(SettingsPrefs.LANGUAGE_SYSTEM) }
+                )
+            }
+            item {
+                ModeOptionCard(
+                    title = stringResource(R.string.settings_language_zh),
+                    desc = stringResource(R.string.settings_language_zh_desc),
+                    selected = languageMode == SettingsPrefs.LANGUAGE_ZH,
+                    onClick = { viewModel.setLanguageMode(SettingsPrefs.LANGUAGE_ZH) }
+                )
+            }
+            item {
+                ModeOptionCard(
+                    title = stringResource(R.string.settings_language_en),
+                    desc = stringResource(R.string.settings_language_en_desc),
+                    selected = languageMode == SettingsPrefs.LANGUAGE_EN,
+                    onClick = { viewModel.setLanguageMode(SettingsPrefs.LANGUAGE_EN) }
+                )
+            }
+
             // ---- 报告解析服务 ----
             item {
-                SectionTitle("报告解析服务")
+                SectionTitle(stringResource(R.string.settings_parse_section))
             }
             item {
                 ProviderSettingsCard(
-                    subtitle = "上传体检报告/化验单后，由视觉大模型识别并提取健康指标（支持血常规、肝肾功能、维生素等全类别）",
+                    subtitle = stringResource(R.string.settings_parse_desc),
                     provider = parseProvider,
                     apiKey = parseApiKey,
                     model = parseModel,
-                    baseUrl = parseBaseUrl,
                     vision = true,
                     onProviderChange = viewModel::setParseProvider,
                     onApiKeyChange = viewModel::setParseApiKey,
-                    onModelChange = viewModel::setParseModel,
-                    onBaseUrlChange = viewModel::setParseBaseUrl
+                    onModelChange = viewModel::setParseModel
                 )
             }
 
             // ---- 健康问答服务 ----
             item {
-                SectionTitle("健康问答服务")
+                SectionTitle(stringResource(R.string.settings_qa_section))
             }
             item {
                 ProviderSettingsCard(
-                    subtitle = "在问答页提问时，由文本大模型结合成员健康记录生成回答；失败或未配置时自动使用本地分析",
+                    subtitle = stringResource(R.string.settings_qa_desc),
                     provider = qaProvider,
                     apiKey = qaApiKey,
                     model = qaModel,
-                    baseUrl = qaBaseUrl,
                     vision = false,
                     onProviderChange = viewModel::setQaProvider,
                     onApiKeyChange = viewModel::setQaApiKey,
-                    onModelChange = viewModel::setQaModel,
-                    onBaseUrlChange = viewModel::setQaBaseUrl
+                    onModelChange = viewModel::setQaModel
                 )
             }
 
             // ---- 数据 ----
             item {
-                SectionTitle("数据")
+                SectionTitle(stringResource(R.string.settings_data_section))
             }
             item {
                 Card(modifier = Modifier.fillMaxWidth()) {
                     Column(modifier = Modifier.padding(16.dp)) {
                         Button(onClick = { viewModel.exportData() }, modifier = Modifier.fillMaxWidth()) {
                             Icon(Icons.Filled.Share, contentDescription = null, modifier = Modifier.padding(end = 6.dp))
-                            Text("导出全部数据（JSON）")
+                            Text(stringResource(R.string.settings_export))
                         }
                         Spacer(Modifier.height(8.dp))
                         Text(
-                            "导出内容包括成员、健康记录、预警、用药提醒与问答历史，通过系统分享发送。",
+                            stringResource(R.string.settings_export_desc),
                             style = MaterialTheme.typography.labelMedium,
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
@@ -242,17 +280,17 @@ fun SettingsScreen(
 
             // ---- 健康检查 ----
             item {
-                SectionTitle("健康检查")
+                SectionTitle(stringResource(R.string.settings_check_section))
             }
             item {
                 Card(modifier = Modifier.fillMaxWidth()) {
                     Column(modifier = Modifier.padding(16.dp)) {
                         OutlinedButton(onClick = { viewModel.runCheckNow() }, modifier = Modifier.fillMaxWidth()) {
-                            Text("立即执行健康检查")
+                            Text(stringResource(R.string.settings_check_now))
                         }
                         Spacer(Modifier.height(8.dp))
                         Text(
-                            "健康检查包括：发送当日用药提醒通知、对全部成员执行异常检测。系统也会每日 8:00 自动执行。",
+                            stringResource(R.string.settings_check_desc),
                             style = MaterialTheme.typography.labelMedium,
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
@@ -262,15 +300,15 @@ fun SettingsScreen(
 
             // ---- 关于 ----
             item {
-                SectionTitle("关于")
+                SectionTitle(stringResource(R.string.settings_about_section))
             }
             item {
                 Card(modifier = Modifier.fillMaxWidth()) {
                     Column(modifier = Modifier.padding(16.dp)) {
-                        Text("家庭健康管家 v1.0.0", style = MaterialTheme.typography.bodyLarge)
+                        Text(stringResource(R.string.settings_app_version), style = MaterialTheme.typography.bodyLarge)
                         Spacer(Modifier.height(6.dp))
                         Text(
-                            "隐私说明：所有健康数据仅保存在本机应用私有目录，不上传云端（除非您主动启用远程解析服务）。删除应用将同时删除全部数据。",
+                            stringResource(R.string.settings_privacy),
                             style = MaterialTheme.typography.labelMedium,
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
@@ -283,8 +321,8 @@ fun SettingsScreen(
     if (showAddMember) {
         MemberEditDialog(
             onDismiss = { showAddMember = false },
-            onSave = { name, relationship, dob, gender, heightCm, weightKg ->
-                viewModel.addMember(name, relationship, dob, gender, heightCm, weightKg)
+            onSave = { name, relationship, dob, gender, heightCm, weightKg, avatarUrl ->
+                viewModel.addMember(name, relationship, dob, gender, heightCm, weightKg, avatarUrl)
                 showAddMember = false
             }
         )
@@ -294,8 +332,8 @@ fun SettingsScreen(
         MemberEditDialog(
             member = member,
             onDismiss = { editTarget = null },
-            onSave = { name, relationship, dob, gender, heightCm, weightKg ->
-                viewModel.updateMember(member, name, relationship, dob, gender, heightCm, weightKg)
+            onSave = { name, relationship, dob, gender, heightCm, weightKg, avatarUrl ->
+                viewModel.updateMember(member, name, relationship, dob, gender, heightCm, weightKg, avatarUrl)
                 editTarget = null
             }
         )
@@ -304,16 +342,16 @@ fun SettingsScreen(
     deleteTarget?.let { member ->
         AlertDialog(
             onDismissRequest = { deleteTarget = null },
-            title = { Text("删除成员") },
-            text = { Text("删除「${member.name}」将同时删除其全部健康记录、预警、提醒与问答历史，且无法恢复。确定删除吗？") },
+            title = { Text(stringResource(R.string.settings_delete_member_title)) },
+            text = { Text(stringResource(R.string.settings_delete_member_confirm, member.name)) },
             confirmButton = {
                 TextButton(onClick = {
                     viewModel.deleteMember(member)
                     deleteTarget = null
-                }) { Text("删除") }
+                }) { Text(stringResource(R.string.common_delete)) }
             },
             dismissButton = {
-                TextButton(onClick = { deleteTarget = null }) { Text("取消") }
+                TextButton(onClick = { deleteTarget = null }) { Text(stringResource(R.string.common_cancel)) }
             }
         )
     }
@@ -370,7 +408,7 @@ private fun ModeOptionCard(
 }
 
 /**
- * 服务供应商配置卡片：本地模式 / LLM 供应商直连（含自定义 OpenAI 兼容服务）。
+ * 服务供应商配置卡片：本地模式 / LLM 供应商直连。
  * vision=true 为报告解析（视觉模型，不显示无视觉能力的供应商）；
  * vision=false 为健康问答（文本模型）。
  */
@@ -380,12 +418,10 @@ private fun ProviderSettingsCard(
     provider: String,
     apiKey: String,
     model: String,
-    baseUrl: String,
     vision: Boolean,
     onProviderChange: (String) -> Unit,
     onApiKeyChange: (String) -> Unit,
-    onModelChange: (String) -> Unit,
-    onBaseUrlChange: (String) -> Unit
+    onModelChange: (String) -> Unit
 ) {
     Card(modifier = Modifier.fillMaxWidth()) {
         Column(modifier = Modifier.padding(16.dp)) {
@@ -395,8 +431,11 @@ private fun ProviderSettingsCard(
 
             // 本地模式
             ModeOptionCard(
-                title = "本地模式",
-                desc = if (vision) "不联网，无法解析报告；可手动录入指标" else "不联网，使用本地规则分析已保存的记录",
+                title = stringResource(R.string.provider_local),
+                desc = stringResource(
+                    if (vision) R.string.provider_local_vision_desc
+                    else R.string.provider_local_qa_desc
+                ),
                 selected = provider == LlmProviders.LOCAL,
                 onClick = { onProviderChange(LlmProviders.LOCAL) }
             )
@@ -416,46 +455,19 @@ private fun ProviderSettingsCard(
                     Spacer(Modifier.height(10.dp))
                     ApiKeyField(apiKey = apiKey, onApiKeyChange = onApiKeyChange)
 
-                    // 模型选择：自定义供应商手输，其余下拉选预设
-                    if (p.id == LlmProviders.CUSTOM) {
+                    // 模型下拉选择（供应商预设模型清单）
+                    if (models.isNotEmpty()) {
                         Spacer(Modifier.height(8.dp))
-                        var modelInput by remember(model) { mutableStateOf(model) }
-                        OutlinedTextField(
-                            value = modelInput,
-                            onValueChange = {
-                                modelInput = it
-                                onModelChange(it)
-                            },
-                            label = { Text(if (vision) "视觉模型名称" else "文本模型名称") },
-                            supportingText = {
-                                Text(
-                                    if (vision) "需支持图片输入的模型，如 qwen2.5-vl:7b、llava:13b"
-                                    else "纯文本对话模型即可，如 qwen2.5:7b、deepseek-v3"
-                                )
-                            },
-                            singleLine = true,
-                            modifier = Modifier.fillMaxWidth()
-                        )
-                        Spacer(Modifier.height(8.dp))
-                        var urlInput by remember(baseUrl) { mutableStateOf(baseUrl) }
-                        OutlinedTextField(
-                            value = urlInput,
-                            onValueChange = {
-                                urlInput = it
-                                onBaseUrlChange(it)
-                            },
-                            label = { Text("服务地址（OpenAI 兼容）") },
-                            supportingText = { Text("以 /v1/ 结尾，如 http://192.168.1.10:11434/v1/") },
-                            singleLine = true,
-                            modifier = Modifier.fillMaxWidth()
-                        )
-                    } else if (models.isNotEmpty()) {
-                        Spacer(Modifier.height(8.dp))
-                        val display = model.ifBlank { "默认（${models.first()}）" }
+                        val display = model.ifBlank {
+                            stringResource(R.string.settings_model_default, models.first())
+                        }
                         DropdownSelector(
                             options = models,
                             selected = display,
-                            label = if (vision) "视觉模型（用于报告解析）" else "文本模型（用于健康问答）",
+                            label = stringResource(
+                                if (vision) R.string.settings_vision_model_label
+                                else R.string.settings_text_model_label
+                            ),
                             onSelect = { onModelChange(it) },
                             modifier = Modifier.fillMaxWidth()
                         )
@@ -486,7 +498,7 @@ private fun ApiKeyField(apiKey: String, onApiKeyChange: (String) -> Unit) {
         },
         trailingIcon = {
             TextButton(onClick = { keyVisible = !keyVisible }) {
-                Text(if (keyVisible) "隐藏" else "显示")
+                Text(stringResource(if (keyVisible) R.string.settings_key_hide else R.string.settings_key_show))
             }
         },
         modifier = Modifier.fillMaxWidth()

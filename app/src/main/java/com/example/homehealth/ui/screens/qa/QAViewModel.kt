@@ -1,12 +1,15 @@
 package com.example.homehealth.ui.screens.qa
 
+import android.content.Context
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.example.homehealth.R
 import com.example.homehealth.data.local.entity.FamilyMember
 import com.example.homehealth.data.local.entity.QAHistory
 import com.example.homehealth.domain.repository.FamilyRepository
 import com.example.homehealth.domain.repository.QARepository
 import dagger.hilt.android.lifecycle.HiltViewModel
+import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
@@ -43,6 +46,7 @@ private data class AskState(
 @OptIn(ExperimentalCoroutinesApi::class)
 @HiltViewModel
 class QAViewModel @Inject constructor(
+    @ApplicationContext private val appContext: Context,
     private val qaRepository: QARepository,
     private val settingsPrefs: com.example.homehealth.data.SettingsPrefs,
     familyRepository: FamilyRepository
@@ -105,7 +109,9 @@ class QAViewModel @Inject constructor(
             try {
                 qaRepository.ask(member, q)
             } catch (e: Exception) {
-                askState.value = askState.value.copy(error = "回答生成失败：${e.message}")
+                askState.value = askState.value.copy(
+                    error = appContext.getString(R.string.vm_qa_failed, e.message ?: "")
+                )
             } finally {
                 // 等 Room 历史流推送出本次问答后再清空 pending，避免问题气泡闪烁消失
                 withTimeoutOrNull(2000) {

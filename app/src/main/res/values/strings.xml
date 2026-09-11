@@ -1,6 +1,323 @@
-<?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="app_name">家庭健康管家</string>
     <string name="channel_medication">用药提醒</string>
     <string name="channel_health">健康预警</string>
+
+    <!-- 通用 -->
+    <string name="common_save">保存</string>
+    <string name="common_cancel">取消</string>
+    <string name="common_delete">删除</string>
+    <string name="common_edit">编辑</string>
+    <string name="common_back">返回</string>
+    <string name="common_confirm">确定</string>
+    <string name="common_retry">重试</string>
+
+    <!-- 底部导航 -->
+    <string name="nav_family">家庭</string>
+    <string name="nav_alerts">预警</string>
+    <string name="nav_reminders">提醒</string>
+    <string name="nav_qa">问答</string>
+    <string name="nav_settings">设置</string>
+
+    <!-- 家庭列表页 -->
+    <string name="family_app_title">家庭健康管家</string>
+    <string name="family_add_member">添加成员</string>
+    <string name="family_empty_title">还没有家庭成员</string>
+    <string name="family_empty_desc">添加家庭成员后即可建立健康档案</string>
+    <string name="family_no_records">暂无健康记录，上传报告开始管理</string>
+    <string name="family_recent_prefix">最近：</string>
+    <string name="family_avatar_cd">成员头像</string>
+
+    <!-- 成员编辑对话框 -->
+    <string name="member_add_title">添加家庭成员</string>
+    <string name="member_edit_title">编辑成员信息</string>
+    <string name="member_name_label">姓名</string>
+    <string name="member_name_error">请输入姓名</string>
+    <string name="member_relationship_label">与我的关系</string>
+    <string name="member_gender_label">性别</string>
+    <string name="member_dob_label">出生日期（yyyy-MM-dd，可空）</string>
+    <string name="member_dob_error">日期格式不正确</string>
+    <string name="member_age_hint">年龄：%1$s（自动计算）</string>
+    <string name="member_height_label">身高（cm，可空）</string>
+    <string name="member_weight_label">体重（kg，可空）</string>
+    <string name="member_avatar_add">设置头像</string>
+    <string name="gender_male">男</string>
+    <string name="gender_female">女</string>
+    <string name="gender_other">其他</string>
+
+    <!-- 成员详情页 -->
+    <string name="detail_title_default">健康档案</string>
+    <string name="detail_edit_cd">编辑个人信息</string>
+    <string name="detail_alerts_cd">预警中心</string>
+    <string name="detail_upload_report">上传报告</string>
+    <string name="detail_metrics_header">健康指标</string>
+    <string name="detail_add_metric">添加指标</string>
+    <string name="detail_metrics_empty">暂无记录。可点击「上传报告」解析体检报告，或点击「添加指标」手动录入。</string>
+    <string name="detail_recent_header">最近记录</string>
+    <string name="detail_unread_alerts">有 %1$d 条未读健康预警，点击查看</string>
+    <string name="detail_record_count">共 %1$d 条记录</string>
+    <string name="detail_reference">参考 %1$s</string>
+    <string name="detail_from_report">报告解析</string>
+    <string name="detail_manual">手动录入</string>
+    <string name="age_suffix">%1$d 岁</string>
+
+    <!-- 指标输入对话框 -->
+    <string name="record_edit_title">编辑%1$s记录</string>
+    <string name="record_add_typed_title">添加%1$s记录</string>
+    <string name="record_add_generic_title">添加健康指标</string>
+    <string name="record_type_label">指标类型</string>
+    <string name="record_systolic">收缩压(高压)</string>
+    <string name="record_diastolic">舒张压(低压)</string>
+    <string name="record_value_unit">数值（%1$s）</string>
+    <string name="record_measure_date">测量日期：%1$s</string>
+    <string name="record_notes_label">备注（可空）</string>
+    <string name="record_invalid_value">请输入有效数值</string>
+
+    <!-- 指标详情页 -->
+    <string name="record_detail_trend">历史趋势</string>
+    <string name="record_detail_no_data">暂无数据</string>
+    <string name="stat_latest">最新</string>
+    <string name="stat_average">平均</string>
+    <string name="stat_highest">最高</string>
+    <string name="stat_lowest">最低</string>
+    <string name="record_reference_range">参考范围：%1$s</string>
+    <string name="record_all_records">全部记录（%1$d）</string>
+    <string name="record_delete_title">删除记录</string>
+    <string name="record_delete_confirm">确定删除 %1$s 的记录（%2$s）吗？</string>
+    <string name="record_add_cd">手动添加记录</string>
+
+    <!-- 预警中心 -->
+    <string name="alerts_title">预警中心</string>
+    <string name="alerts_run_now_cd">立即检测</string>
+    <string name="alerts_mark_all_read_cd">全部已读</string>
+    <string name="alerts_detected_new">检测完成，新增 %1$d 条预警</string>
+    <string name="alerts_detected_none">检测完成，暂无新的异常</string>
+    <string name="alerts_filter_all">全部（%1$d）</string>
+    <string name="alerts_filter_unread">未读（%1$d）</string>
+    <string name="alerts_no_unread">没有未读预警</string>
+    <string name="alerts_empty">暂无预警。上传报告或点击右上角「立即检测」分析健康数据。</string>
+    <string name="alerts_delete_title">删除预警</string>
+    <string name="alerts_delete_confirm">确定删除「%1$s」这条预警吗？</string>
+    <string name="severity_high">高危</string>
+    <string name="severity_medium">中危</string>
+    <string name="severity_low">提示</string>
+
+    <!-- 解析状态 -->
+    <string name="parse_status_pending">待解析</string>
+    <string name="parse_status_processing">解析中</string>
+    <string name="parse_status_completed">已完成</string>
+    <string name="parse_status_failed">失败</string>
+
+    <!-- 上传页 -->
+    <string name="upload_title">上传报告</string>
+    <string name="upload_archive_member">归档成员</string>
+    <string name="upload_image_cd">报告图片</string>
+    <string name="upload_placeholder">拍摄或选择体检报告 / 化验单照片</string>
+    <string name="upload_take_photo">拍照</string>
+    <string name="upload_pick_photo">相册</string>
+    <string name="upload_saving">正在保存图片…</string>
+    <string name="upload_parsing">正在解析报告…</string>
+    <string name="upload_confirming">正在保存记录…</string>
+    <string name="upload_result_title">解析结果（请核对后保存）</string>
+    <string name="upload_engine_vision">Vision 大模型 %1$s · 视觉理解 + JSON 结构化提取</string>
+    <string name="upload_engine_vision_default">Vision 大模型 · 视觉理解 + JSON 结构化提取</string>
+    <string name="upload_engine_fallback">结构化提取</string>
+    <string name="upload_normalized_count">，已归一化 %1$d 项单位</string>
+    <string name="upload_normalized_default">，单位已按标准字典归一</string>
+    <string name="upload_count_summary">%1$s · 识别 %2$d 项指标%3$s</string>
+    <string name="upload_confirm_save">确认保存 %1$d 条记录</string>
+    <string name="upload_show_raw">查看原始文本</string>
+    <string name="upload_hide_raw">收起原始文本</string>
+    <string name="upload_history">解析历史</string>
+    <string name="upload_reparse">重新解析</string>
+    <string name="upload_saved_done">记录已保存，已完成异常检测</string>
+    <string name="upload_metric_label">指标</string>
+    <string name="upload_value_label">数值</string>
+    <string name="upload_unit_label">单位</string>
+    <string name="upload_date_label">日期（yyyy-MM-dd）</string>
+    <string name="upload_normalized_note">已归一化：%1$s</string>
+    <string name="vm_upload_save_failed">图片保存失败：%1$s</string>
+    <string name="vm_upload_oom">内存不足，无法处理该图片，请裁剪后重试</string>
+    <string name="vm_upload_unknown">未知错误</string>
+    <string name="vm_upload_parse_failed">解析失败：%1$s</string>
+
+    <!-- 提醒页 -->
+    <string name="reminders_title">用药提醒</string>
+    <string name="reminders_add_cd">添加提醒</string>
+    <string name="reminders_empty_title">还没有用药提醒</string>
+    <string name="reminders_empty_desc">点击右下角 + 添加药品与服药时间</string>
+    <string name="reminders_delete_title">删除提醒</string>
+    <string name="reminders_delete_confirm">确定删除「%1$s」的用药提醒吗？已写入日历的日程将一并删除。</string>
+    <string name="reminders_enabled">已启用</string>
+    <string name="reminders_disabled">已停用</string>
+    <string name="reminders_since">自 %1$s 起 · 每日提醒</string>
+    <string name="reminders_write_calendar">写入日历</string>
+    <string name="reminders_calendar_denied">未授予日历权限，无法写入</string>
+    <string name="reminders_calendar_invalid">写入日历失败：服药时间格式无效</string>
+    <string name="reminders_calendar_updated">旧日程已更新</string>
+    <string name="reminders_calendar_new">每日提醒</string>
+    <string name="reminders_calendar_done">已写入日历：%1$s（%2$d 个时间点 · %3$s）</string>
+    <string name="reminders_calendar_failed">写入日历失败：%1$s</string>
+    <string name="reminders_add_title">添加用药提醒</string>
+    <string name="reminders_edit_title">编辑用药提醒</string>
+    <string name="reminders_member_label">用药成员</string>
+    <string name="reminders_med_name">药品名称</string>
+    <string name="reminders_dosage">剂量（如 5mg × 1片）</string>
+    <string name="reminders_times">每日时间（逗号分隔）</string>
+    <string name="reminders_times_hint">格式：HH:mm，如 08:00, 20:00</string>
+    <string name="reminders_form_error">请填写药品名称，时间格式为 HH:mm（逗号分隔）</string>
+    <string name="reminders_default_dosage">遵医嘱</string>
+
+    <!-- 问答页 -->
+    <string name="qa_title">健康问答</string>
+    <string name="qa_member_label">咨询对象</string>
+    <string name="qa_disclaimer">回答基于已保存的健康记录生成，仅供参考，不构成医疗建议。</string>
+    <string name="qa_empty_members">请先添加家庭成员</string>
+    <string name="qa_try_ask">试试问我：「最近血压怎么样？」</string>
+    <string name="qa_analyzing">正在分析健康记录…</string>
+    <string name="qa_input_hint">输入健康问题…</string>
+    <string name="qa_send_cd">发送</string>
+    <string name="qa_sources">来源：\n%1$s</string>
+    <string name="qa_thinking_show">查看思考过程</string>
+    <string name="qa_thinking_hide">收起思考过程</string>
+    <string name="vm_qa_failed">回答生成失败：%1$s</string>
+    <string name="member_picker_pattern">%1$s（%2$s）</string>
+
+    <!-- 设置页 -->
+    <string name="settings_title">设置</string>
+    <string name="settings_member_section">家庭成员管理</string>
+    <string name="settings_add_member">添加家庭成员</string>
+    <string name="settings_export_share_title">导出健康数据</string>
+    <string name="settings_export">导出全部数据（JSON）</string>
+    <string name="settings_export_desc">导出内容包括成员、健康记录、预警、用药提醒与问答历史，通过系统分享发送。</string>
+    <string name="settings_check_section">健康检查</string>
+    <string name="settings_check_now">立即执行健康检查</string>
+    <string name="settings_check_desc">健康检查包括：发送当日用药提醒通知、对全部成员执行异常检测。系统也会每日 8:00 自动执行。</string>
+    <string name="settings_check_enqueued">已提交健康检查任务，结果将以通知形式提醒</string>
+    <string name="settings_about_section">关于</string>
+    <string name="settings_app_version">家庭健康管家 v1.0.0</string>
+    <string name="settings_privacy">隐私说明：所有健康数据仅保存在本机应用私有目录，不上传云端（除非您主动启用远程解析服务）。删除应用将同时删除全部数据。</string>
+    <string name="settings_delete_member_title">删除成员</string>
+    <string name="settings_delete_member_confirm">删除「%1$s」将同时删除其全部健康记录、预警、提醒与问答历史，且无法恢复。确定删除吗？</string>
+
+    <!-- 设置：外观 -->
+    <string name="settings_theme_section">外观</string>
+    <string name="settings_theme_system">跟随系统</string>
+    <string name="settings_theme_system_desc">浅色 / 深色随系统设置自动切换</string>
+    <string name="settings_theme_light">浅色模式</string>
+    <string name="settings_theme_light_desc">始终使用明亮的白色主题</string>
+    <string name="settings_theme_dark">深色模式</string>
+    <string name="settings_theme_dark_desc">始终使用护眼的暗色主题</string>
+
+    <!-- 设置：语言 -->
+    <string name="settings_data_section">数据</string>
+    <string name="settings_language_section">语言</string>
+    <string name="settings_language_system">跟随系统</string>
+    <string name="settings_language_system_desc">中 / 英文随系统设置自动切换</string>
+    <string name="settings_language_zh">中文</string>
+    <string name="settings_language_zh_desc">界面始终显示中文</string>
+    <string name="settings_language_en">English</string>
+    <string name="settings_language_en_desc">界面始终显示英文</string>
+
+    <!-- 设置：服务 -->
+    <string name="settings_parse_section">报告解析服务</string>
+    <string name="settings_parse_desc">上传体检报告/化验单后，由视觉大模型识别并提取健康指标（支持血常规、肝肾功能、维生素等全类别）</string>
+    <string name="settings_qa_section">健康问答服务</string>
+    <string name="settings_qa_desc">在问答页提问时，由文本大模型结合成员健康记录生成回答；失败或未配置时自动使用本地分析</string>
+    <string name="provider_local">本地模式</string>
+    <string name="provider_local_vision_desc">不联网，无法解析报告；可手动录入指标</string>
+    <string name="provider_local_qa_desc">不联网，使用本地规则分析已保存的记录</string>
+    <string name="settings_vision_model_label">视觉模型（用于报告解析）</string>
+    <string name="settings_text_model_label">文本模型（用于健康问答）</string>
+    <string name="settings_model_default">默认（%1$s）</string>
+    <string name="settings_key_show">显示</string>
+    <string name="settings_key_hide">隐藏</string>
+
+    <!-- 成员选择下拉（多页共用） -->
+    <string name="picker_member_label">成员</string>
+
+    <!-- 关系（存储 code，显示本地化） -->
+    <string name="rel_self">本人</string>
+    <string name="rel_spouse">配偶</string>
+    <string name="rel_father">父亲</string>
+    <string name="rel_mother">母亲</string>
+    <string name="rel_father_in_law">公公</string>
+    <string name="rel_mother_in_law">婆婆</string>
+    <string name="rel_wife_father">岳父</string>
+    <string name="rel_wife_mother">岳母</string>
+    <string name="rel_elder_brother">哥哥</string>
+    <string name="rel_elder_sister">姐姐</string>
+    <string name="rel_younger_brother">弟弟</string>
+    <string name="rel_younger_sister">妹妹</string>
+    <string name="rel_son">儿子</string>
+    <string name="rel_daughter">女儿</string>
+    <string name="rel_other">其他</string>
+
+    <!-- 相对时间 -->
+    <string name="time_today">今天</string>
+    <string name="time_yesterday">昨天</string>
+    <string name="time_days_ago">%1$d天前</string>
+
+    <!-- 指标分组 -->
+    <string name="group_vitals">基础体征</string>
+    <string name="group_glucose">血糖代谢</string>
+    <string name="group_lipids">血脂</string>
+    <string name="group_cbc">血常规</string>
+    <string name="group_liver">肝功能</string>
+    <string name="group_kidney">肾功能</string>
+    <string name="group_thyroid">甲状腺</string>
+    <string name="group_vitamins">维生素与微量元素</string>
+    <string name="group_electrolytes">电解质</string>
+    <string name="group_others">其他</string>
+
+    <!-- 指标名 -->
+    <string name="metric_blood_pressure">血压</string>
+    <string name="metric_heart_rate">心率</string>
+    <string name="metric_weight">体重</string>
+    <string name="metric_height">身高</string>
+    <string name="metric_bmi">BMI 指数</string>
+    <string name="metric_body_fat">体脂率</string>
+    <string name="metric_waist_circumference">腰围</string>
+    <string name="metric_body_temperature">体温</string>
+    <string name="metric_spo2">血氧饱和度</string>
+    <string name="metric_blood_glucose">空腹血糖</string>
+    <string name="metric_postprandial_glucose">餐后2小时血糖</string>
+    <string name="metric_hba1c">糖化血红蛋白</string>
+    <string name="metric_total_cholesterol">总胆固醇</string>
+    <string name="metric_triglycerides">甘油三酯</string>
+    <string name="metric_hdl">高密度脂蛋白</string>
+    <string name="metric_ldl">低密度脂蛋白</string>
+    <string name="metric_wbc">白细胞计数</string>
+    <string name="metric_rbc">红细胞计数</string>
+    <string name="metric_hemoglobin">血红蛋白</string>
+    <string name="metric_hematocrit">红细胞压积</string>
+    <string name="metric_mcv">平均红细胞体积</string>
+    <string name="metric_platelets">血小板计数</string>
+    <string name="metric_neutrophil_ratio">中性粒细胞比率</string>
+    <string name="metric_lymphocyte_ratio">淋巴细胞比率</string>
+    <string name="metric_alt">谷丙转氨酶</string>
+    <string name="metric_ast">谷草转氨酶</string>
+    <string name="metric_ggt">γ-谷氨酰转肽酶</string>
+    <string name="metric_total_bilirubin">总胆红素</string>
+    <string name="metric_albumin">白蛋白</string>
+    <string name="metric_creatinine">肌酐</string>
+    <string name="metric_urea_nitrogen">尿素氮</string>
+    <string name="metric_uric_acid">尿酸</string>
+    <string name="metric_tsh">促甲状腺激素</string>
+    <string name="metric_ft3">游离三碘甲状腺原氨酸</string>
+    <string name="metric_ft4">游离甲状腺素</string>
+    <string name="metric_vitamin_a">维生素A</string>
+    <string name="metric_vitamin_b1">维生素B1</string>
+    <string name="metric_vitamin_b6">维生素B6</string>
+    <string name="metric_folate">叶酸</string>
+    <string name="metric_vitamin_b12">维生素B12</string>
+    <string name="metric_vitamin_c">维生素C</string>
+    <string name="metric_vitamin_d">25-羟维生素D</string>
+    <string name="metric_vitamin_e">维生素E</string>
+    <string name="metric_serum_iron">血清铁</string>
+    <string name="metric_potassium">血钾</string>
+    <string name="metric_sodium">血钠</string>
+    <string name="metric_chloride">血氯</string>
+    <string name="metric_calcium">血钙</string>
+    <string name="metric_bone_density_t">骨密度T值</string>
 </resources>

@@ -14,23 +14,35 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalConfiguration
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import coil.compose.AsyncImage
+import com.example.homehealth.R
 import com.example.homehealth.data.local.entity.AlertSeverity
 import com.example.homehealth.data.local.entity.ParseStatus
 import com.example.homehealth.ui.theme.HighSeverity
 import com.example.homehealth.ui.theme.LowSeverity
 import com.example.homehealth.ui.theme.MediumSeverity
 import com.example.homehealth.util.DateUtils
+import java.io.File
+
+/** 当前应用语言是否为英文（per-app locale 生效后 Configuration 随之更新） */
+@Composable
+fun isEnglish(): Boolean =
+    LocalConfiguration.current.locales[0]?.language == "en"
 
 /** 严重程度徽章 */
 @Composable
 fun SeverityBadge(severity: AlertSeverity, modifier: Modifier = Modifier) {
     val (color, label) = when (severity) {
-        AlertSeverity.HIGH -> HighSeverity to "高危"
-        AlertSeverity.MEDIUM -> MediumSeverity to "中危"
-        AlertSeverity.LOW -> LowSeverity to "提示"
+        AlertSeverity.HIGH -> HighSeverity to stringResource(R.string.severity_high)
+        AlertSeverity.MEDIUM -> MediumSeverity to stringResource(R.string.severity_medium)
+        AlertSeverity.LOW -> LowSeverity to stringResource(R.string.severity_low)
     }
     Box(
         modifier = modifier
@@ -50,10 +62,10 @@ fun SeverityBadge(severity: AlertSeverity, modifier: Modifier = Modifier) {
 @Composable
 fun ParseStatusBadge(status: ParseStatus, modifier: Modifier = Modifier) {
     val (color, label) = when (status) {
-        ParseStatus.PENDING -> Color(0xFF757575) to "待解析"
-        ParseStatus.PROCESSING -> MediumSeverity to "解析中"
-        ParseStatus.COMPLETED -> Color(0xFF2E7D32) to "已完成"
-        ParseStatus.FAILED -> HighSeverity to "失败"
+        ParseStatus.PENDING -> Color(0xFF757575) to stringResource(R.string.parse_status_pending)
+        ParseStatus.PROCESSING -> MediumSeverity to stringResource(R.string.parse_status_processing)
+        ParseStatus.COMPLETED -> Color(0xFF2E7D32) to stringResource(R.string.parse_status_completed)
+        ParseStatus.FAILED -> HighSeverity to stringResource(R.string.parse_status_failed)
     }
     Box(
         modifier = modifier
@@ -69,13 +81,25 @@ fun ParseStatusBadge(status: ParseStatus, modifier: Modifier = Modifier) {
     }
 }
 
-/** 成员头像：首字圆形 */
+/** 成员头像：优先显示已设置的图片（圆形裁剪），否则显示姓名首字 */
 @Composable
 fun MemberAvatar(
     name: String,
     modifier: Modifier = Modifier,
-    size: Int = 48
+    size: Int = 48,
+    avatarUrl: String? = null
 ) {
+    if (!avatarUrl.isNullOrBlank()) {
+        AsyncImage(
+            model = File(avatarUrl),
+            contentDescription = stringResource(R.string.family_avatar_cd),
+            contentScale = ContentScale.Crop,
+            modifier = modifier
+                .size(size.dp)
+                .clip(CircleShape)
+        )
+        return
+    }
     val palette = listOf(
         Color(0xFF00897B), Color(0xFF5C6BC0), Color(0xFF8D6E63),
         Color(0xFF43A047), Color(0xFFF4511E), Color(0xFF6D4C41)
@@ -152,8 +176,9 @@ fun StatItem(
     }
 }
 
-/** 格式化时间戳为「今天 / 昨天 / N天前」 */
-fun relativeTime(ts: Long): String = DateUtils.relative(ts)
+/** 格式化时间戳为「今天 / 昨天 / N天前」（本地化） */
+@Composable
+fun relativeTime(ts: Long): String = DateUtils.relative(ts, isEnglish())
 
 private fun abs(x: Int): Int = if (x < 0) -x else x
 private fun abs(x: Double): Double = if (x < 0) -x else x

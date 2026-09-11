@@ -119,13 +119,19 @@ class MemberDetailViewModel @Inject constructor(
         dob: String?,
         gender: String?,
         heightCm: Double?,
-        weightKg: Double?
+        weightKg: Double?,
+        avatarUrl: String? = null
     ) {
         viewModelScope.launch {
+            // 头像被替换或清除时删除旧头像文件
+            if (existing.avatarUrl != null && existing.avatarUrl != avatarUrl) {
+                runCatching { java.io.File(existing.avatarUrl).delete() }
+            }
             familyRepository.upsertMember(
                 existing.copy(
                     name = name,
                     relationship = relationship,
+                    avatarUrl = avatarUrl,
                     dateOfBirth = dob,
                     gender = gender,
                     heightCm = heightCm,

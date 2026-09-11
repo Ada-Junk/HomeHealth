@@ -1,5 +1,7 @@
 package com.example.homehealth.util
 
+import com.example.homehealth.R
+
 /**
  * 健康指标体系：覆盖体检报告常见全类别指标。
  * 每项含英文标识、中文名、单位、参考范围（展示文本 + 数值上下限用于异常检测）。
@@ -130,6 +132,76 @@ object HealthTypes {
     fun unit(type: String): String = DEF_MAP[type]?.unit ?: ""
 
     fun range(type: String): String = DEF_MAP[type]?.rangeText ?: "—"
+
+    // ---- UI 本地化：指标名 / 分组名的字符串资源 ----
+
+    /** 指标名字符串资源 id（UI 显示用；数据层与 LLM 请继续用 [label]） */
+    fun labelRes(type: String): Int = when (type) {
+        BLOOD_PRESSURE -> R.string.metric_blood_pressure
+        HEART_RATE -> R.string.metric_heart_rate
+        WEIGHT -> R.string.metric_weight
+        "height" -> R.string.metric_height
+        "bmi" -> R.string.metric_bmi
+        "body_fat" -> R.string.metric_body_fat
+        "waist_circumference" -> R.string.metric_waist_circumference
+        "body_temperature" -> R.string.metric_body_temperature
+        "spo2" -> R.string.metric_spo2
+        BLOOD_GLUCOSE -> R.string.metric_blood_glucose
+        "postprandial_glucose" -> R.string.metric_postprandial_glucose
+        "hba1c" -> R.string.metric_hba1c
+        TOTAL_CHOLESTEROL -> R.string.metric_total_cholesterol
+        TRIGLYCERIDES -> R.string.metric_triglycerides
+        HDL -> R.string.metric_hdl
+        LDL -> R.string.metric_ldl
+        "wbc" -> R.string.metric_wbc
+        "rbc" -> R.string.metric_rbc
+        "hemoglobin" -> R.string.metric_hemoglobin
+        "hematocrit" -> R.string.metric_hematocrit
+        "mcv" -> R.string.metric_mcv
+        "platelets" -> R.string.metric_platelets
+        "neutrophil_ratio" -> R.string.metric_neutrophil_ratio
+        "lymphocyte_ratio" -> R.string.metric_lymphocyte_ratio
+        "alt" -> R.string.metric_alt
+        "ast" -> R.string.metric_ast
+        "ggt" -> R.string.metric_ggt
+        "total_bilirubin" -> R.string.metric_total_bilirubin
+        "albumin" -> R.string.metric_albumin
+        "creatinine" -> R.string.metric_creatinine
+        "urea_nitrogen" -> R.string.metric_urea_nitrogen
+        "uric_acid" -> R.string.metric_uric_acid
+        "tsh" -> R.string.metric_tsh
+        "ft3" -> R.string.metric_ft3
+        "ft4" -> R.string.metric_ft4
+        "vitamin_a" -> R.string.metric_vitamin_a
+        "vitamin_b1" -> R.string.metric_vitamin_b1
+        "vitamin_b6" -> R.string.metric_vitamin_b6
+        "folate" -> R.string.metric_folate
+        "vitamin_b12" -> R.string.metric_vitamin_b12
+        "vitamin_c" -> R.string.metric_vitamin_c
+        "vitamin_d" -> R.string.metric_vitamin_d
+        "vitamin_e" -> R.string.metric_vitamin_e
+        "serum_iron" -> R.string.metric_serum_iron
+        "potassium" -> R.string.metric_potassium
+        "sodium" -> R.string.metric_sodium
+        "chloride" -> R.string.metric_chloride
+        "calcium" -> R.string.metric_calcium
+        "bone_density_t" -> R.string.metric_bone_density_t
+        else -> 0
+    }
+
+    /** 分组名字符串资源 id */
+    fun groupRes(groupKey: String): Int = when (groupKey) {
+        "vitals" -> R.string.group_vitals
+        "glucose" -> R.string.group_glucose
+        "lipids" -> R.string.group_lipids
+        "cbc" -> R.string.group_cbc
+        "liver" -> R.string.group_liver
+        "kidney" -> R.string.group_kidney
+        "thyroid" -> R.string.group_thyroid
+        "vitamins" -> R.string.group_vitamins
+        "electrolytes" -> R.string.group_electrolytes
+        else -> R.string.group_others
+    }
 
     /** 上升视为不良（用于趋势着色与预警措辞） */
     fun higherIsWorse(type: String): Boolean = when (type) {

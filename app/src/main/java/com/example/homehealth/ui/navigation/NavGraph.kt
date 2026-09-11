@@ -18,12 +18,14 @@ import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.res.stringResource
 import androidx.navigation.NavHostController
 import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.navArgument
+import com.example.homehealth.R
 import com.example.homehealth.ui.screens.alerts.AlertsScreen
 import com.example.homehealth.ui.screens.documentupload.DocumentUploadScreen
 import com.example.homehealth.ui.screens.familylist.FamilyListScreen
@@ -53,7 +55,7 @@ object Routes {
 
 private data class BottomItem(
     val route: String,
-    val label: String,
+    val labelRes: Int,
     val icon: ImageVector,
     val module: ModuleTheme
 )
@@ -65,11 +67,11 @@ fun RootApp(navController: NavHostController, darkTheme: Boolean) {
     val currentRoute = backStackEntry?.destination?.route
 
     val bottomItems = listOf(
-        BottomItem(Routes.FAMILY, "家庭", Icons.Filled.Home, ModuleTheme.FAMILY),
-        BottomItem(Routes.ALERTS, "预警", Icons.Filled.Notifications, ModuleTheme.ALERTS),
-        BottomItem(Routes.REMINDERS, "提醒", Icons.Filled.Alarm, ModuleTheme.REMINDERS),
-        BottomItem(Routes.QA, "问答", Icons.Filled.QuestionAnswer, ModuleTheme.QA),
-        BottomItem(Routes.SETTINGS, "设置", Icons.Filled.Settings, ModuleTheme.SETTINGS)
+        BottomItem(Routes.FAMILY, R.string.nav_family, Icons.Filled.Home, ModuleTheme.FAMILY),
+        BottomItem(Routes.ALERTS, R.string.nav_alerts, Icons.Filled.Notifications, ModuleTheme.ALERTS),
+        BottomItem(Routes.REMINDERS, R.string.nav_reminders, Icons.Filled.Alarm, ModuleTheme.REMINDERS),
+        BottomItem(Routes.QA, R.string.nav_qa, Icons.Filled.QuestionAnswer, ModuleTheme.QA),
+        BottomItem(Routes.SETTINGS, R.string.nav_settings, Icons.Filled.Settings, ModuleTheme.SETTINGS)
     )
     val showBottomBar = currentRoute in bottomItems.map { it.route }
 
@@ -110,13 +112,13 @@ fun RootApp(navController: NavHostController, darkTheme: Boolean) {
                                 icon = {
                                     Icon(
                                         item.icon,
-                                        contentDescription = item.label,
+                                        contentDescription = stringResource(item.labelRes),
                                         tint = itemColor
                                     )
                                 },
                                 label = {
                                     Text(
-                                        item.label,
+                                        stringResource(item.labelRes),
                                         color = if (selected) itemColor else Color.Unspecified
                                     )
                                 },

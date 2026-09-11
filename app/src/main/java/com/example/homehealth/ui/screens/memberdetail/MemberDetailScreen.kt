@@ -37,16 +37,21 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.NavHostController
+import com.example.homehealth.R
 import com.example.homehealth.data.local.entity.HealthRecord
 import com.example.homehealth.ui.components.MemberAvatar
 import com.example.homehealth.ui.components.MemberEditDialog
 import com.example.homehealth.ui.components.RecordInputDialog
 import com.example.homehealth.ui.components.TrendIndicator
+import com.example.homehealth.ui.components.genderLabel
+import com.example.homehealth.ui.components.relationshipLabel
+import com.example.homehealth.ui.components.relativeTime
 import com.example.homehealth.ui.navigation.Routes
 import com.example.homehealth.util.DateUtils
 import com.example.homehealth.util.HealthTypes
@@ -68,10 +73,10 @@ fun MemberDetailScreen(
     Scaffold(
         topBar = {
             androidx.compose.material3.TopAppBar(
-                title = { Text(member?.name ?: "健康档案") },
+                title = { Text(member?.name ?: stringResource(R.string.detail_title_default)) },
                 navigationIcon = {
                     IconButton(onClick = { navController.popBackStack() }) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "返回")
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = stringResource(R.string.common_back))
                     }
                 },
                 actions = {
@@ -80,10 +85,10 @@ fun MemberDetailScreen(
                         onClick = { showEditDialog = true },
                         enabled = member != null
                     ) {
-                        Icon(Icons.Filled.Edit, contentDescription = "编辑个人信息")
+                        Icon(Icons.Filled.Edit, contentDescription = stringResource(R.string.detail_edit_cd))
                     }
                     IconButton(onClick = { navController.navigate(Routes.ALERTS) }) {
-                        Icon(Icons.Filled.Notifications, contentDescription = "预警中心")
+                        Icon(Icons.Filled.Notifications, contentDescription = stringResource(R.string.detail_alerts_cd))
                         if (unreadAlerts > 0) Badge { Text("$unreadAlerts") }
                     }
                 }
@@ -93,7 +98,7 @@ fun MemberDetailScreen(
             ExtendedFloatingActionButton(
                 onClick = { navController.navigate(Routes.upload(viewModel.memberId)) },
                 icon = { Icon(Icons.Filled.CloudUpload, contentDescription = null) },
-                text = { Text("上传报告") }
+                text = { Text(stringResource(R.string.detail_upload_report)) }
             )
         }
     ) { padding ->
@@ -111,27 +116,23 @@ fun MemberDetailScreen(
                         modifier = Modifier.padding(16.dp),
                         verticalAlignment = Alignment.CenterVertically
                     ) {
-                        MemberAvatar(name = member?.name ?: "?", size = 56)
+                        MemberAvatar(name = member?.name ?: "?", avatarUrl = member?.avatarUrl, size = 56)
                         Column(modifier = Modifier.padding(start = 14.dp)) {
                             Text(
                                 text = member?.name ?: "",
                                 style = MaterialTheme.typography.titleMedium
                             )
                             Spacer(Modifier.height(2.dp))
+                            val ageText = DateUtils.age(member?.dateOfBirth)
+                                ?.let { stringResource(R.string.age_suffix, it) }
+                            val genderText = genderLabel(member?.gender).ifBlank { null }
                             Text(
-                                text = buildString {
-                                    append(member?.relationship ?: "")
-                                    DateUtils.age(member?.dateOfBirth)?.let { append(" · $it 岁") }
-                                    member?.gender?.let { g ->
-                                        append(
-                                            when (g) {
-                                                "male" -> " · 男"
-                                                "female" -> " · 女"
-                                                else -> ""
-                                            }
-                                        )
-                                    }
-                                },
+                                text = listOfNotNull(
+                                    member?.relationship?.takeIf { it.isNotBlank() }
+                                        ?.let { relationshipLabel(it) },
+                                    ageText,
+                                    genderText
+                                ).joinToString(" · "),
                                 style = MaterialTheme.typography.bodyMedium,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant
                             )
@@ -158,7 +159,7 @@ fun MemberDetailScreen(
                                 tint = MaterialTheme.colorScheme.error
                             )
                             Text(
-                                "有 $unreadAlerts 条未读健康预警，点击查看",
+                                stringResource(R.string.detail_unread_alerts, unreadAlerts),
                                 modifier = Modifier.padding(start = 10.dp),
                                 style = MaterialTheme.typography.bodyMedium,
                                 color = MaterialTheme.colorScheme.error
@@ -174,7 +175,7 @@ fun MemberDetailScreen(
                     modifier = Modifier.fillMaxWidth(),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    SectionHeader("健康指标")
+                    SectionHeader(stringResource(R.string.detail_metrics_header))
                     Spacer(Modifier.weight(1f))
                     TextButton(onClick = { showAddRecordDialog = true }) {
                         Icon(
@@ -182,14 +183,14 @@ fun MemberDetailScreen(
                             contentDescription = null,
                             modifier = Modifier.size(18.dp)
                         )
-                        Text("添加指标")
+                        Text(stringResource(R.string.detail_add_metric))
                     }
                 }
             }
             if (metrics.isEmpty()) {
                 item {
                     Text(
-                        "暂无记录。可点击「上传报告」解析体检报告，或点击「添加指标」手动录入。",
+                        stringResource(R.string.detail_metrics_empty),
                         style = MaterialTheme.typography.bodyMedium,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
@@ -210,7 +211,7 @@ fun MemberDetailScreen(
 
             // 最近记录
             if (recentRecords.isNotEmpty()) {
-                item { SectionHeader("最近记录") }
+                item { SectionHeader(stringResource(R.string.detail_recent_header)) }
                 items(recentRecords, key = { it.id }) { record ->
                     RecentRecordRow(record)
                 }
@@ -224,8 +225,8 @@ fun MemberDetailScreen(
             MemberEditDialog(
                 member = current,
                 onDismiss = { showEditDialog = false },
-                onSave = { name, relationship, dob, gender, heightCm, weightKg ->
-                    viewModel.updateMember(current, name, relationship, dob, gender, heightCm, weightKg)
+                onSave = { name, relationship, dob, gender, heightCm, weightKg, avatarUrl ->
+                    viewModel.updateMember(current, name, relationship, dob, gender, heightCm, weightKg, avatarUrl)
                     showEditDialog = false
                 }
             )
@@ -270,7 +271,7 @@ private fun MetricCard(
         ) {
             Column(modifier = Modifier.weight(1f)) {
                 Text(
-                    text = HealthTypes.label(metric.type),
+                    text = stringResource(HealthTypes.labelRes(metric.type)),
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
@@ -289,7 +290,11 @@ private fun MetricCard(
                     )
                 }
                 Text(
-                    text = "${DateUtils.relative(metric.latest.recordDate)} · 共 ${metric.count} 条记录 · 参考 ${HealthTypes.range(metric.type)}",
+                    text = listOf(
+                        relativeTime(metric.latest.recordDate),
+                        stringResource(R.string.detail_record_count, metric.count),
+                        stringResource(R.string.detail_reference, HealthTypes.range(metric.type))
+                    ).joinToString(" · "),
                     style = MaterialTheme.typography.labelMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     modifier = Modifier.padding(top = 4.dp)
@@ -309,12 +314,15 @@ private fun RecentRecordRow(record: HealthRecord) {
         ) {
             Column(modifier = Modifier.weight(1f)) {
                 Text(
-                    text = HealthTypes.label(record.type),
+                    text = stringResource(HealthTypes.labelRes(record.type)),
                     style = MaterialTheme.typography.bodyMedium
                 )
                 Text(
-                    text = DateUtils.formatDateTime(record.recordDate) +
-                        if (record.sourceDocumentId != null) " · 报告解析" else " · 手动录入",
+                    text = DateUtils.formatDateTime(record.recordDate) + " · " +
+                        stringResource(
+                            if (record.sourceDocumentId != null) R.string.detail_from_report
+                            else R.string.detail_manual
+                        ),
                     style = MaterialTheme.typography.labelMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )

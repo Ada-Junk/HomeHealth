@@ -41,11 +41,14 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.NavHostController
+import com.example.homehealth.R
 import com.example.homehealth.data.local.entity.QAHistory
+import com.example.homehealth.ui.components.memberPickerLabel
 import com.example.homehealth.util.DateUtils
 
 /** 健康问答页：聊天式界面，基于成员健康数据回答 */
@@ -70,7 +73,7 @@ fun QAScreen(
 
     Scaffold(
         topBar = {
-            androidx.compose.material3.TopAppBar(title = { Text("健康问答") })
+            androidx.compose.material3.TopAppBar(title = { Text(stringResource(R.string.qa_title)) })
         }
     ) { padding ->
         Column(
@@ -81,23 +84,23 @@ fun QAScreen(
         ) {
             // 成员选择 + 提示
             if (state.members.isNotEmpty()) {
+                val memberOptions = state.members.map { it to memberPickerLabel(it.name, it.relationship) }
                 com.example.homehealth.ui.components.DropdownSelector(
-                    options = state.members.map { "${it.name}（${it.relationship}）" },
-                    selected = state.members
-                        .firstOrNull { it.id == state.selectedMemberId }
-                        ?.let { "${it.name}（${it.relationship}）" } ?: "",
-                    label = "咨询对象",
+                    options = memberOptions.map { it.second },
+                    selected = memberOptions
+                        .firstOrNull { it.first.id == state.selectedMemberId }
+                        ?.second ?: "",
+                    label = stringResource(R.string.qa_member_label),
                     onSelect = { label ->
-                        state.members.firstOrNull {
-                            "${it.name}（${it.relationship}）" == label
-                        }?.let { viewModel.selectMember(it.id) }
+                        memberOptions.firstOrNull { it.second == label }
+                            ?.let { viewModel.selectMember(it.first.id) }
                     },
                     modifier = Modifier
                         .fillMaxWidth()
                         .padding(horizontal = 16.dp, vertical = 4.dp)
                 )
                 Text(
-                    "回答基于已保存的健康记录生成，仅供参考，不构成医疗建议。",
+                    stringResource(R.string.qa_disclaimer),
                     style = MaterialTheme.typography.labelMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp)
@@ -108,7 +111,8 @@ fun QAScreen(
             Box(modifier = Modifier.weight(1f)) {
                 if (state.history.isEmpty() && !state.loading) {
                     Text(
-                        if (state.members.isEmpty()) "请先添加家庭成员" else "试试问我：「最近血压怎么样？」",
+                        if (state.members.isEmpty()) stringResource(R.string.qa_empty_members)
+                        else stringResource(R.string.qa_try_ask),
                         style = MaterialTheme.typography.bodyMedium,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                         modifier = Modifier
@@ -151,7 +155,7 @@ fun QAScreen(
                                         strokeWidth = 2.dp
                                     )
                                     Text(
-                                        "正在分析健康记录…",
+                                        stringResource(R.string.qa_analyzing),
                                         style = MaterialTheme.typography.bodyMedium
                                     )
                                 }
@@ -181,7 +185,7 @@ fun QAScreen(
                     value = input,
                     onValueChange = { input = it },
                     placeholder = {
-                        Text("输入健康问题…", style = MaterialTheme.typography.bodyMedium)
+                        Text(stringResource(R.string.qa_input_hint), style = MaterialTheme.typography.bodyMedium)
                     },
                     textStyle = MaterialTheme.typography.bodyMedium,
                     maxLines = 2,
@@ -202,7 +206,7 @@ fun QAScreen(
                 ) {
                     Icon(
                         Icons.AutoMirrored.Filled.Send,
-                        contentDescription = "发送",
+                        contentDescription = stringResource(R.string.qa_send_cd),
                         tint = MaterialTheme.colorScheme.primary,
                         modifier = Modifier.size(20.dp)
                     )
@@ -279,7 +283,7 @@ private fun ChatBubble(item: QAHistory) {
                 )
                 if (!item.sources.isNullOrBlank()) {
                     Text(
-                        text = "来源：\n" + item.sources,
+                        text = stringResource(R.string.qa_sources, item.sources),
                         style = MaterialTheme.typography.labelMedium,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                         modifier = Modifier.padding(top = 8.dp)
@@ -315,7 +319,10 @@ private fun ThinkingBlock(thinking: String) {
                 modifier = Modifier.size(14.dp)
             )
             Text(
-                text = if (expanded) "收起思考过程" else "查看思考过程",
+                text = stringResource(
+                    if (expanded) R.string.qa_thinking_hide
+                    else R.string.qa_thinking_show
+                ),
                 style = MaterialTheme.typography.labelMedium,
                 color = MaterialTheme.colorScheme.primary,
                 modifier = Modifier.padding(start = 6.dp)

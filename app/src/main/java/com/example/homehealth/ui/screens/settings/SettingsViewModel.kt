@@ -1,8 +1,11 @@
 package com.example.homehealth.ui.screens.settings
 
 import android.content.Context
+import androidx.appcompat.app.AppCompatDelegate
+import androidx.core.os.LocaleListCompat
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.example.homehealth.R
 import com.example.homehealth.data.SettingsPrefs
 import com.example.homehealth.data.local.entity.Alert
 import com.example.homehealth.data.local.entity.FamilyMember
@@ -70,11 +73,25 @@ class SettingsViewModel @Inject constructor(
         themeMode.value = value
     }
 
+    // ---- 语言 ----
+    val languageMode = MutableStateFlow(settingsPrefs.languageMode)
+
+    /** 切换语言：持久化 + 应用 per-app locale（Activity 自动重建生效） */
+    fun setLanguageMode(value: String) {
+        settingsPrefs.languageMode = value
+        languageMode.value = value
+        val locales = when (value) {
+            SettingsPrefs.LANGUAGE_ZH -> LocaleListCompat.forLanguageTags("zh")
+            SettingsPrefs.LANGUAGE_EN -> LocaleListCompat.forLanguageTags("en")
+            else -> LocaleListCompat.getEmptyLocaleList()
+        }
+        AppCompatDelegate.setApplicationLocales(locales)
+    }
+
     // ---- 报告解析服务配置 ----
     val parseProvider = MutableStateFlow(settingsPrefs.parseProvider)
     val parseApiKey = MutableStateFlow(settingsPrefs.parseApiKey)
     val parseModel = MutableStateFlow(settingsPrefs.parseModel)
-    val parseBaseUrl = MutableStateFlow(settingsPrefs.parseBaseUrl)
 
     fun setParseProvider(value: String) {
         if (settingsPrefs.parseProvider != value) {
@@ -96,16 +113,10 @@ class SettingsViewModel @Inject constructor(
         parseModel.value = value
     }
 
-    fun setParseBaseUrl(value: String) {
-        settingsPrefs.parseBaseUrl = value
-        parseBaseUrl.value = value
-    }
-
     // ---- 健康问答服务配置 ----
     val qaProvider = MutableStateFlow(settingsPrefs.qaProvider)
     val qaApiKey = MutableStateFlow(settingsPrefs.qaApiKey)
     val qaModel = MutableStateFlow(settingsPrefs.qaModel)
-    val qaBaseUrl = MutableStateFlow(settingsPrefs.qaBaseUrl)
 
     fun setQaProvider(value: String) {
         if (settingsPrefs.qaProvider != value) {
@@ -127,11 +138,6 @@ class SettingsViewModel @Inject constructor(
         qaModel.value = value
     }
 
-    fun setQaBaseUrl(value: String) {
-        settingsPrefs.qaBaseUrl = value
-        qaBaseUrl.value = value
-    }
-
     fun upsertMember(member: FamilyMember?) {
         viewModelScope.launch {
             familyRepository.upsertMember(
@@ -146,7 +152,8 @@ class SettingsViewModel @Inject constructor(
         dob: String?,
         gender: String?,
         heightCm: Double?,
-        weightKg: Double?
+        weightKg: Double?,
+        avatarUrl: String? = null
     ) {
         viewModelScope.launch {
             familyRepository.upsertMember(
@@ -154,6 +161,7 @@ class SettingsViewModel @Inject constructor(
                     id = UUID.randomUUID().toString(),
                     name = name,
                     relationship = relationship,
+                    avatarUrl = avatarUrl,
                     dateOfBirth = dob,
                     gender = gender,
                     heightCm = heightCm,
@@ -170,13 +178,19 @@ class SettingsViewModel @Inject constructor(
         dob: String?,
         gender: String?,
         heightCm: Double?,
-        weightKg: Double?
+        weightKg: Double?,
+        avatarUrl: String? = null
     ) {
         viewModelScope.launch {
+            // 头像被替换或清除时删除旧头像文件
+            if (existing.avatarUrl != null && existing.avatarUrl != avatarUrl) {
+                runCatching { File(existing.avatarUrl).delete() }
+            }
             familyRepository.upsertMember(
                 existing.copy(
                     name = name,
                     relationship = relationship,
+                    avatarUrl = avatarUrl,
                     dateOfBirth = dob,
                     gender = gender,
                     heightCm = heightCm,
@@ -227,7 +241,9 @@ class SettingsViewModel @Inject constructor(
         val request = OneTimeWorkRequestBuilder<DailyCheckWorker>().build()
         WorkManager.getInstance(appContext).enqueue(request)
         viewModelScope.launch {
-            _events.emit(SettingsEvent.CheckEnqueued("已提交健康检查任务，结果将以通知形式提醒"))
+            _events.emit(
+                SettingsEvent.CheckEnqueued(appContext.getString(R.string.settings_check_enqueued))
+            )
         }
     }
 }

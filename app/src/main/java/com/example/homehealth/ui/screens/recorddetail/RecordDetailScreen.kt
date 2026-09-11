@@ -34,11 +34,13 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.NavHostController
+import com.example.homehealth.R
 import com.example.homehealth.data.local.entity.HealthRecord
 import com.example.homehealth.ui.components.RecordInputDialog
 import com.example.homehealth.ui.components.StatItem
@@ -54,7 +56,7 @@ fun RecordDetailScreen(
     viewModel: RecordDetailViewModel = hiltViewModel()
 ) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
-    val label = HealthTypes.label(viewModel.type)
+    val label = stringResource(HealthTypes.labelRes(viewModel.type))
     var showAddDialog by remember { mutableStateOf(false) }
     var editTarget by remember { mutableStateOf<HealthRecord?>(null) }
     var deleteTarget by remember { mutableStateOf<HealthRecord?>(null) }
@@ -65,14 +67,14 @@ fun RecordDetailScreen(
                 title = { Text(label) },
                 navigationIcon = {
                     IconButton(onClick = { navController.popBackStack() }) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "返回")
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = stringResource(R.string.common_back))
                     }
                 }
             )
         },
         floatingActionButton = {
             FloatingActionButton(onClick = { showAddDialog = true }) {
-                Icon(Icons.Filled.Add, contentDescription = "手动添加记录")
+                Icon(Icons.Filled.Add, contentDescription = stringResource(R.string.record_add_cd))
             }
         }
     ) { padding ->
@@ -88,13 +90,13 @@ fun RecordDetailScreen(
                 Card(modifier = Modifier.fillMaxWidth()) {
                     Column(modifier = Modifier.padding(16.dp)) {
                         Text(
-                            "历史趋势",
+                            stringResource(R.string.record_detail_trend),
                             style = MaterialTheme.typography.titleMedium
                         )
                         Spacer(Modifier.height(12.dp))
                         if (state.chartPoints.isEmpty()) {
                             Text(
-                                "暂无数据",
+                                stringResource(R.string.record_detail_no_data),
                                 style = MaterialTheme.typography.bodyMedium,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant
                             )
@@ -115,16 +117,16 @@ fun RecordDetailScreen(
                                 .padding(vertical = 16.dp),
                             horizontalArrangement = Arrangement.SpaceEvenly
                         ) {
-                            StatItem("最新", formatNum(state.latest))
-                            StatItem("平均", formatNum(state.average))
-                            StatItem("最高", formatNum(state.highest))
-                            StatItem("最低", formatNum(state.lowest))
+                            StatItem(stringResource(R.string.stat_latest), formatNum(state.latest))
+                            StatItem(stringResource(R.string.stat_average), formatNum(state.average))
+                            StatItem(stringResource(R.string.stat_highest), formatNum(state.highest))
+                            StatItem(stringResource(R.string.stat_lowest), formatNum(state.lowest))
                         }
                     }
                 }
                 item {
                     Text(
-                        "参考范围：${HealthTypes.range(viewModel.type)}",
+                        stringResource(R.string.record_reference_range, HealthTypes.range(viewModel.type)),
                         style = MaterialTheme.typography.labelMedium,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
@@ -134,7 +136,7 @@ fun RecordDetailScreen(
             // 记录列表
             item {
                 Text(
-                    "全部记录（${state.records.size}）",
+                    stringResource(R.string.record_all_records, state.records.size),
                     style = MaterialTheme.typography.titleMedium,
                     modifier = Modifier.padding(top = 4.dp)
                 )
@@ -152,13 +154,11 @@ fun RecordDetailScreen(
                                 fontWeight = FontWeight.SemiBold
                             )
                             Text(
-                                text = buildString {
-                                    append(DateUtils.formatDateTime(record.recordDate))
-                                    append(
-                                        if (record.sourceDocumentId != null) " · 报告解析"
-                                        else " · 手动录入"
-                                    )
-                                },
+                                text = DateUtils.formatDateTime(record.recordDate) + " · " +
+                                    stringResource(
+                                        if (record.sourceDocumentId != null) R.string.detail_from_report
+                                        else R.string.detail_manual
+                                    ),
                                 style = MaterialTheme.typography.labelMedium,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant
                             )
@@ -166,14 +166,14 @@ fun RecordDetailScreen(
                         IconButton(onClick = { editTarget = record }) {
                             Icon(
                                 Icons.Filled.Edit,
-                                contentDescription = "编辑",
+                                contentDescription = stringResource(R.string.common_edit),
                                 tint = MaterialTheme.colorScheme.onSurfaceVariant
                             )
                         }
                         IconButton(onClick = { deleteTarget = record }) {
                             Icon(
                                 Icons.Filled.Delete,
-                                contentDescription = "删除",
+                                contentDescription = stringResource(R.string.common_delete),
                                 tint = MaterialTheme.colorScheme.onSurfaceVariant
                             )
                         }
@@ -210,16 +210,16 @@ fun RecordDetailScreen(
     deleteTarget?.let { record ->
         AlertDialog(
             onDismissRequest = { deleteTarget = null },
-            title = { Text("删除记录") },
-            text = { Text("确定删除 ${DateUtils.formatDate(record.recordDate)} 的记录（${record.value}）吗？") },
+            title = { Text(stringResource(R.string.record_delete_title)) },
+            text = { Text(stringResource(R.string.record_delete_confirm, DateUtils.formatDate(record.recordDate), record.value)) },
             confirmButton = {
                 TextButton(onClick = {
                     viewModel.deleteRecord(record)
                     deleteTarget = null
-                }) { Text("删除") }
+                }) { Text(stringResource(R.string.common_delete)) }
             },
             dismissButton = {
-                TextButton(onClick = { deleteTarget = null }) { Text("取消") }
+                TextButton(onClick = { deleteTarget = null }) { Text(stringResource(R.string.common_cancel)) }
             }
         )
     }

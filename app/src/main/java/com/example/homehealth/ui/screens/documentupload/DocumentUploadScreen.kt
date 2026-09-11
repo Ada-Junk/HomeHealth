@@ -49,14 +49,17 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.core.content.ContextCompat
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.NavHostController
 import coil.compose.AsyncImage
+import com.example.homehealth.R
 import com.example.homehealth.data.local.entity.MedicalDocument
 import com.example.homehealth.ui.components.ParseStatusBadge
+import com.example.homehealth.ui.components.memberPickerLabel
 import com.example.homehealth.util.DateUtils
 import com.example.homehealth.util.HealthTypes
 import java.io.File
@@ -101,7 +104,7 @@ fun DocumentUploadScreen(
     LaunchedEffect(state.phase) {
         when (state.phase) {
             UploadPhase.DONE -> {
-                snackbarHostState.showSnackbar("记录已保存，已完成异常检测")
+                snackbarHostState.showSnackbar(context.getString(R.string.upload_saved_done))
                 viewModel.resetToIdle()
                 navController.popBackStack()
             }
@@ -112,10 +115,10 @@ fun DocumentUploadScreen(
     Scaffold(
         topBar = {
             androidx.compose.material3.TopAppBar(
-                title = { Text("上传报告") },
+                title = { Text(stringResource(R.string.upload_title)) },
                 navigationIcon = {
                     IconButton(onClick = { navController.popBackStack() }) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "返回")
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = stringResource(R.string.common_back))
                     }
                 }
             )
@@ -132,16 +135,16 @@ fun DocumentUploadScreen(
             // 成员选择
             if (state.members.size > 1) {
                 item {
+                    val memberOptions = state.members.map { it to memberPickerLabel(it.name, it.relationship) }
                     com.example.homehealth.ui.components.DropdownSelector(
-                        options = state.members.map { "${it.name}（${it.relationship}）" },
-                        selected = state.members
-                            .firstOrNull { it.id == state.selectedMemberId }
-                            ?.let { "${it.name}（${it.relationship}）" } ?: "",
-                        label = "归档成员",
+                        options = memberOptions.map { it.second },
+                        selected = memberOptions
+                            .firstOrNull { it.first.id == state.selectedMemberId }
+                            ?.second ?: "",
+                        label = stringResource(R.string.upload_archive_member),
                         onSelect = { label ->
-                            state.members.firstOrNull {
-                                "${it.name}（${it.relationship}）" == label
-                            }?.let { viewModel.selectMember(it.id) }
+                            memberOptions.firstOrNull { it.second == label }
+                                ?.let { viewModel.selectMember(it.first.id) }
                         }
                     )
                 }
@@ -154,7 +157,7 @@ fun DocumentUploadScreen(
                         if (state.imagePath != null) {
                             AsyncImage(
                                 model = File(state.imagePath!!),
-                                contentDescription = "报告图片",
+                                contentDescription = stringResource(R.string.upload_image_cd),
                                 contentScale = ContentScale.Crop,
                                 modifier = Modifier
                                     .fillMaxWidth()
@@ -169,7 +172,7 @@ fun DocumentUploadScreen(
                                 contentAlignment = Alignment.Center
                             ) {
                                 Text(
-                                    "拍摄或选择体检报告 / 化验单照片",
+                                    stringResource(R.string.upload_placeholder),
                                     style = MaterialTheme.typography.bodyMedium,
                                     color = MaterialTheme.colorScheme.onSurfaceVariant
                                 )
@@ -196,7 +199,7 @@ fun DocumentUploadScreen(
                                     contentDescription = null,
                                     modifier = Modifier.padding(end = 6.dp)
                                 )
-                                Text("拍照")
+                                Text(stringResource(R.string.upload_take_photo))
                             }
                             OutlinedButton(
                                 onClick = {
@@ -213,7 +216,7 @@ fun DocumentUploadScreen(
                                     contentDescription = null,
                                     modifier = Modifier.padding(end = 6.dp)
                                 )
-                                Text("相册")
+                                Text(stringResource(R.string.upload_pick_photo))
                             }
                         }
                     }
@@ -229,13 +232,13 @@ fun DocumentUploadScreen(
                         Column(modifier = Modifier.padding(16.dp)) {
                             Text(
                                 when (state.phase) {
-                                    UploadPhase.SAVING -> "正在保存图片…"
-                                    UploadPhase.PARSING -> "正在解析报告…"
-                                    else -> "正在保存记录…"
+                                    UploadPhase.SAVING -> stringResource(R.string.upload_saving)
+                                    UploadPhase.PARSING -> stringResource(R.string.upload_parsing)
+                                    else -> stringResource(R.string.upload_confirming)
                                 },
                                 style = MaterialTheme.typography.bodyMedium
                             )
-                            // 标明解析引擎：Vision 大模型（含模型名）或 OCR + LLM JSON 模式
+                            // 标明解析引擎：Vision 大模型（含模型名）+ JSON 结构化提取
                             if (state.phase == UploadPhase.PARSING && state.parseEngine.isNotBlank()) {
                                 Text(
                                     state.parseEngine,
@@ -270,18 +273,23 @@ fun DocumentUploadScreen(
                 item {
                     Column {
                         Text(
-                            "解析结果（请核对后保存）",
+                            stringResource(R.string.upload_result_title),
                             style = MaterialTheme.typography.titleMedium
                         )
-                        val engine = state.parseEngine.ifBlank { "结构化提取" }
+                        val engine = state.parseEngine.ifBlank {
+                            stringResource(R.string.upload_engine_fallback)
+                        }
                         val converted = state.editableRecords.count { it.normalizationNote != null }
                         val normalized = if (converted > 0) {
-                            "，已归一化 $converted 项单位"
+                            stringResource(R.string.upload_normalized_count, converted)
                         } else {
-                            "，单位已按标准字典归一"
+                            stringResource(R.string.upload_normalized_default)
                         }
                         Text(
-                            "$engine · 识别 ${state.editableRecords.size} 项指标$normalized",
+                            stringResource(
+                                R.string.upload_count_summary,
+                                engine, state.editableRecords.size, normalized
+                            ),
                             style = MaterialTheme.typography.labelMedium,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                             modifier = Modifier.padding(top = 2.dp)
@@ -304,13 +312,18 @@ fun DocumentUploadScreen(
                         onClick = { viewModel.confirmRecords() },
                         modifier = Modifier.fillMaxWidth()
                     ) {
-                        Text("确认保存 ${state.editableRecords.size} 条记录")
+                        Text(stringResource(R.string.upload_confirm_save, state.editableRecords.size))
                     }
                 }
                 if (state.rawText.isNotBlank()) {
                     item {
                         TextButton(onClick = { showRawText = !showRawText }) {
-                            Text(if (showRawText) "收起 OCR 原始文本" else "查看 OCR 原始文本")
+                            Text(
+                                stringResource(
+                                    if (showRawText) R.string.upload_hide_raw
+                                    else R.string.upload_show_raw
+                                )
+                            )
                         }
                     }
                     if (showRawText) {
@@ -331,7 +344,7 @@ fun DocumentUploadScreen(
             if (state.documents.isNotEmpty()) {
                 item {
                     Text(
-                        "解析历史",
+                        stringResource(R.string.upload_history),
                         style = MaterialTheme.typography.titleMedium,
                         modifier = Modifier.padding(top = 8.dp)
                     )
@@ -356,12 +369,13 @@ private fun EditableRecordCard(
     Card(modifier = Modifier.fillMaxWidth()) {
         Column(modifier = Modifier.padding(12.dp)) {
             Row(verticalAlignment = Alignment.CenterVertically) {
+                val typeOptions = HealthTypes.ALL.map { it to stringResource(HealthTypes.labelRes(it)) }
                 com.example.homehealth.ui.components.DropdownSelector(
-                    options = HealthTypes.ALL.map { HealthTypes.label(it) },
-                    selected = HealthTypes.label(record.type),
-                    label = "指标",
+                    options = typeOptions.map { it.second },
+                    selected = stringResource(HealthTypes.labelRes(record.type)),
+                    label = stringResource(R.string.upload_metric_label),
                     onSelect = { label ->
-                        val type = HealthTypes.ALL.first { HealthTypes.label(it) == label }
+                        val type = typeOptions.first { it.second == label }.first
                         onChange(record.copy(type = type))
                     },
                     modifier = Modifier.weight(1f)
@@ -369,7 +383,7 @@ private fun EditableRecordCard(
                 IconButton(onClick = onRemove) {
                     Icon(
                         Icons.Filled.Delete,
-                        contentDescription = "删除",
+                        contentDescription = stringResource(R.string.common_delete),
                         tint = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                 }
@@ -377,7 +391,7 @@ private fun EditableRecordCard(
             // 归一化换算说明（如「nmol/L 已换算为 ng/mL」）
             record.normalizationNote?.let { note ->
                 Text(
-                    "已归一化：$note",
+                    stringResource(R.string.upload_normalized_note, note),
                     style = MaterialTheme.typography.labelSmall,
                     color = MaterialTheme.colorScheme.primary,
                     modifier = Modifier.padding(vertical = 2.dp)
@@ -387,14 +401,14 @@ private fun EditableRecordCard(
                 OutlinedTextField(
                     value = record.value,
                     onValueChange = { onChange(record.copy(value = it)) },
-                    label = { Text("数值") },
+                    label = { Text(stringResource(R.string.upload_value_label)) },
                     singleLine = true,
                     modifier = Modifier.weight(1.4f)
                 )
                 OutlinedTextField(
                     value = record.unit,
                     onValueChange = { onChange(record.copy(unit = it)) },
-                    label = { Text("单位") },
+                    label = { Text(stringResource(R.string.upload_unit_label)) },
                     singleLine = true,
                     modifier = Modifier.weight(1f)
                 )
@@ -403,7 +417,7 @@ private fun EditableRecordCard(
             OutlinedTextField(
                 value = record.date,
                 onValueChange = { onChange(record.copy(date = it)) },
-                label = { Text("日期（yyyy-MM-dd）") },
+                label = { Text(stringResource(R.string.upload_date_label)) },
                 singleLine = true,
                 modifier = Modifier.fillMaxWidth()
             )
@@ -435,10 +449,10 @@ private fun DocumentHistoryRow(
             ParseStatusBadge(status = document.parseStatus)
             when (document.parseStatus) {
                 com.example.homehealth.data.local.entity.ParseStatus.FAILED ->
-                    TextButton(onClick = onRetry) { Text("重试") }
+                    TextButton(onClick = onRetry) { Text(stringResource(R.string.common_retry)) }
                 // 已完成的文档也允许重新解析（如记录被误删后恢复）
                 com.example.homehealth.data.local.entity.ParseStatus.COMPLETED ->
-                    TextButton(onClick = onRetry) { Text("重新解析") }
+                    TextButton(onClick = onRetry) { Text(stringResource(R.string.upload_reparse)) }
                 else -> {}
             }
         }

@@ -10,7 +10,7 @@ import kotlinx.coroutines.flow.StateFlow
 
 /**
  * 应用设置（SharedPreferences）。
- * 报告解析服务与健康问答服务各自独立配置：供应商 / API Key / 模型 / 服务地址。
+ * 报告解析服务与健康问答服务各自独立配置：供应商 / API Key / 模型。
  */
 @Singleton
 class SettingsPrefs @Inject constructor(@ApplicationContext context: Context) {
@@ -24,7 +24,7 @@ class SettingsPrefs @Inject constructor(@ApplicationContext context: Context) {
 
     init {
         migrateOldServiceMode()
-        migrateRemovedBackend()
+        migrateRemovedServices()
     }
 
     // ---- 外观模式 ----
@@ -37,9 +37,16 @@ class SettingsPrefs @Inject constructor(@ApplicationContext context: Context) {
             _themeModeFlow.value = value
         }
 
+    // ---- 语言 ----
+
+    /** 语言模式：system（跟随系统）/ zh（中文）/ en（英文）。切换语言会重建 Activity，无需 Flow */
+    var languageMode: String
+        get() = sp.getString(KEY_LANGUAGE_MODE, LANGUAGE_SYSTEM) ?: LANGUAGE_SYSTEM
+        set(value) = sp.edit().putString(KEY_LANGUAGE_MODE, value).apply()
+
     // ---- 报告解析服务 ----
 
-    /** 解析供应商：local / zhipu / openai / gemini / deepseek / kimi / qwen / anthropic / custom */
+    /** 解析供应商：local / zhipu / openai / gemini / deepseek / kimi / qwen / anthropic */
     var parseProvider: String
         get() = sp.getString(KEY_PARSE_PROVIDER, LlmProviders.LOCAL) ?: LlmProviders.LOCAL
         set(value) = sp.edit().putString(KEY_PARSE_PROVIDER, value).apply()
@@ -54,14 +61,9 @@ class SettingsPrefs @Inject constructor(@ApplicationContext context: Context) {
         get() = sp.getString(KEY_PARSE_MODEL, "") ?: ""
         set(value) = sp.edit().putString(KEY_PARSE_MODEL, value.trim()).apply()
 
-    /** 解析服务地址（custom 时为 OpenAI 兼容地址，如 http://192.168.1.10:11434/v1/） */
-    var parseBaseUrl: String
-        get() = sp.getString(KEY_PARSE_URL, "") ?: ""
-        set(value) = sp.edit().putString(KEY_PARSE_URL, value.trim()).apply()
-
     // ---- 健康问答服务 ----
 
-    /** 问答供应商：local / zhipu / openai / gemini / deepseek / kimi / qwen / anthropic / custom */
+    /** 问答供应商：local / zhipu / openai / gemini / deepseek / kimi / qwen / anthropic */
     var qaProvider: String
         get() = sp.getString(KEY_QA_PROVIDER, LlmProviders.LOCAL) ?: LlmProviders.LOCAL
         set(value) = sp.edit().putString(KEY_QA_PROVIDER, value).apply()
@@ -76,11 +78,6 @@ class SettingsPrefs @Inject constructor(@ApplicationContext context: Context) {
         get() = sp.getString(KEY_QA_MODEL, "") ?: ""
         set(value) = sp.edit().putString(KEY_QA_MODEL, value.trim()).apply()
 
-    /** 问答服务地址（custom 时为 OpenAI 兼容地址） */
-    var qaBaseUrl: String
-        get() = sp.getString(KEY_QA_URL, "") ?: ""
-        set(value) = sp.edit().putString(KEY_QA_URL, value.trim()).apply()
-
     /** 健康问答上次咨询的成员（重启后自动选中，直接显示历史对话） */
     var qaMemberId: String
         get() = sp.getString(KEY_QA_MEMBER, "") ?: ""
@@ -92,7 +89,6 @@ class SettingsPrefs @Inject constructor(@ApplicationContext context: Context) {
 
         val mode = sp.getString("service_mode", LlmProviders.LOCAL) ?: LlmProviders.LOCAL
         val oldKey = sp.getString("zhipu_api_key", "") ?: ""
-        val oldUrl = sp.getString("api_base_url", "") ?: ""
 
         sp.edit()
             .putString(KEY_PARSE_PROVIDER, mode)
@@ -101,20 +97,18 @@ class SettingsPrefs @Inject constructor(@ApplicationContext context: Context) {
             .putString(KEY_QA_KEY, oldKey)
             .putString(KEY_PARSE_MODEL, "")
             .putString(KEY_QA_MODEL, "")
-            .putString(KEY_PARSE_URL, oldUrl)
-            .putString(KEY_QA_URL, oldUrl)
             .apply()
     }
 
-    /** 自建后端服务已下线：历史选择了 backend 的用户迁移回本地模式 */
-    private fun migrateRemovedBackend() {
-        val legacyBackend = "backend"
+    /** 已下线服务迁移：历史选择了 backend（自建后端）/ custom（自定义服务）的用户迁回本地模式 */
+    private fun migrateRemovedServices() {
+        val legacyIds = setOf("backend", "custom")
         val parse = sp.getString(KEY_PARSE_PROVIDER, null)
         val qa = sp.getString(KEY_QA_PROVIDER, null)
-        if (parse == legacyBackend || qa == legacyBackend) {
+        if (parse in legacyIds || qa in legacyIds) {
             sp.edit().apply {
-                if (parse == legacyBackend) putString(KEY_PARSE_PROVIDER, LlmProviders.LOCAL)
-                if (qa == legacyBackend) putString(KEY_QA_PROVIDER, LlmProviders.LOCAL)
+                if (parse in legacyIds) putString(KEY_PARSE_PROVIDER, LlmProviders.LOCAL)
+                if (qa in legacyIds) putString(KEY_QA_PROVIDER, LlmProviders.LOCAL)
             }.apply()
         }
     }
@@ -125,15 +119,19 @@ class SettingsPrefs @Inject constructor(@ApplicationContext context: Context) {
         const val THEME_LIGHT = "light"
         const val THEME_DARK = "dark"
 
+        /** 语言模式取值 */
+        const val LANGUAGE_SYSTEM = "system"
+        const val LANGUAGE_ZH = "zh"
+        const val LANGUAGE_EN = "en"
+
         private const val KEY_THEME_MODE = "theme_mode"
+        private const val KEY_LANGUAGE_MODE = "language_mode"
         private const val KEY_PARSE_PROVIDER = "parse_provider"
         private const val KEY_PARSE_KEY = "parse_api_key"
         private const val KEY_PARSE_MODEL = "parse_model"
-        private const val KEY_PARSE_URL = "parse_base_url"
         private const val KEY_QA_PROVIDER = "qa_provider"
         private const val KEY_QA_KEY = "qa_api_key"
         private const val KEY_QA_MODEL = "qa_model"
-        private const val KEY_QA_URL = "qa_base_url"
         private const val KEY_QA_MEMBER = "qa_member_id"
     }
 }
