@@ -22,15 +22,15 @@
 
 **English**
 
-HomeHealth is a local-first, privacy-focused family health manager for Android. Snap a photo of a lab report or health checkup sheet, and a **Vision LLM** extracts 49 types of structured health metrics in JSON mode — complete blood count, glucose, lipids, liver & kidney function, vitamins and more. A **Schema Normalization** layer then maps 110+ metric aliases to a standard dictionary, unifies 25 unit spellings, and applies 24 clinically reliable unit conversions before anything reaches the database. Every family member gets an independent health profile with trend analysis, anomaly alerts, record-grounded Q&A, and medication reminders synced with the system calendar. The UI is fully bilingual (English / 中文).
+HomeHealth is a local-first, privacy-focused family health manager for Android. Snap a photo of a lab report or health checkup sheet, and a **Vision LLM** extracts 49 types of structured health metrics in JSON mode — complete blood count, glucose, lipids, liver & kidney function, vitamins and more. A **Schema Normalization** layer then maps 106 metric aliases to a standard dictionary, unifies 24 unit spellings, and applies 24 clinically reliable unit conversions before anything reaches the database. Every family member gets an independent health profile with three-rule anomaly detection (reference ranges / trend windows / personal baseline), record-grounded Q&A, and medication reminders synced with the system calendar. Every LLM call is logged locally (latency / retries / failure type — never the prompt content). The UI is fully bilingual (English / 中文).
 
-> 🔐 **Local-first, privacy first**: all health data lives in an on-device Room database and is never uploaded anywhere; API keys stay on the device; the app is fully usable without configuring any LLM (a built-in offline Q&A engine covers the basics).
+> 🔐 **Local-first, privacy first**: all health data lives in an on-device Room database and is never uploaded anywhere; API keys are AES-256-GCM encrypted with Android Keystore; the app is fully usable without configuring any LLM (a built-in offline Q&A engine covers the basics).
 
 **中文**
 
-HomeHealth 面向多成员家庭，是一款本地优先、隐私至上的 Android 健康管理应用。只需拍照或上传体检报告、化验单，**Vision 大模型**即可通过 JSON 模式自动提取 49 类结构化健康指标（血常规、血糖血脂、肝肾功能、维生素等）。入库前，**Schema 归一化**层会把 110+ 指标别名映射到标准字典、统一 25 种单位写法、执行 24 类医学上可靠的跨单位换算。每位家庭成员拥有独立健康档案，提供趋势分析、异常预警、基于个人记录的健康问答，以及与系统日历联动的用药提醒。界面已全面支持中英双语。
+HomeHealth 面向多成员家庭，是一款本地优先、隐私至上的 Android 健康管理应用。只需拍照或上传体检报告、化验单，**Vision 大模型**即可通过 JSON 模式自动提取 49 类结构化健康指标（血常规、血糖血脂、肝肾功能、维生素等）。入库前，**Schema 归一化**层会把 106 条指标别名映射到标准字典、统一 24 种单位写法、执行 24 类医学上可靠的跨单位换算。每位家庭成员拥有独立健康档案，异常检测由三条规则组成（参考范围 / 趋势时间窗 / 个体基线），另有基于个人记录的健康问答，以及与系统日历联动的用药提醒。每次 LLM 调用都在本地留有观测日志（耗时 / 重试 / 失败类型——不含提示词内容）。界面已全面支持中英双语。
 
-> 🔐 **本地优先，隐私至上**：所有健康数据以 Room 数据库存储在设备本地，不上传任何第三方服务器；API Key 仅保存在本机；不配置任何 LLM 也完全可用（内置离线问答引擎兜底）。
+> 🔐 **本地优先，隐私至上**：所有健康数据以 Room 数据库存储在设备本地，不上传任何第三方服务器；API Key 经 Android Keystore AES-256-GCM 加密后保存；不配置任何 LLM 也完全可用（内置离线问答引擎兜底）。
 
 ## 🔄 Core Pipeline | 核心流程
 
@@ -42,8 +42,8 @@ HomeHealth 面向多成员家庭，是一款本地优先、隐私至上的 Andro
 │ upload   │   │ JSON extract │   │ names + units  │   │ editable    │   │ trends     │
 └─────────┘   └──────────────┘   └────────────────┘   └─────────────┘   └────────────┘
                      │                    │                                   │
-                     │ image downsampling │ 110+ alias mapping                │ trend charts
-                     │ (OOM-safe)         │ 25 unit spellings unified         │ rule-based alerts
+                     │ image downsampling │ 106 alias mappings                │ trend charts
+                     │ (OOM-safe)         │ 24 unit spellings unified         │ three-rule alerts
                      │ dual protocol      │ 24 reliable unit conversions      │ record-grounded Q&A
                      │ (OpenAI/Anthropic) │ (no guessing on unknown units)    │ med reminders
                      └────────────────────┴───────────────────────────────────┴────────────┘
@@ -52,24 +52,24 @@ HomeHealth 面向多成员家庭，是一款本地优先、隐私至上的 Andro
 1. **Photo upload** — camera or gallery; images are downsampled (max edge 1600px) to prevent OOM on large photos
 2. **Vision LLM parsing** — a vision model (e.g., glm-4.6v, qwen-vl) extracts metric name / value / unit / date in JSON mode; text-only models are rejected by runtime validation
 3. **Schema normalization** — aliases mapped to the 49-metric standard dictionary; units unified; cross-unit conversions applied only with reliable coefficients — **unknown units are never guessed**
-4. **Human confirmation** — results shown as editable cards (with conversion annotations) before saving
-5. **Continuous insights** — trend charts, anomaly detection (reference ranges + trends), RAG-style Q&A over personal records, daily medication reminders
+4. **Human confirmation** — results shown as editable cards (with conversion annotations) before saving; implausible values get an explicit double-confirm
+5. **Continuous insights** — trend charts, three-rule anomaly detection, record-grounded Q&A over personal records, daily medication reminders
 
 **中文 —— 从报告到洞察：**
 
 1. **拍照上传**：拍照或相册选取报告图片，自动降采样（最长边 1600px）防止大图 OOM
 2. **Vision LLM 解析**：视觉大模型以 JSON 模式提取指标名/数值/单位/日期，文本模型在此被严格校验拦截
 3. **Schema 归一化**：指标别名映射标准字典（49 项指标体系），单位写法统一，跨单位按可靠系数换算——**没有系数的单位绝不猜测**
-4. **人工确认**：解析结果以可编辑卡片展示（含换算标注），核对修正后入库
-5. **持续洞察**：趋势折线图、异常检测（参考范围+趋势）、基于个人记录的 RAG 问答、每日用药提醒
+4. **人工确认**：解析结果以可编辑卡片展示（含换算标注），核对修正后入库；明显可疑的数值会触发二次确认
+5. **持续洞察**：趋势折线图、三规则异常检测、基于个人记录的健康问答、每日用药提醒
 
 ## 💎 Highlights | 差异化亮点
 
 ### 1. 📐 Schema Normalization — metric standardization | 指标标准化归一化
 
-**EN**: Most AI report parsers output whatever name and unit the model feels like: `vitamin D / 25-OH-D / 25(OH)D` all over the place, `nmol/L` vs `ng/mL` incomparable. HomeHealth normalizes before storage: **110+ alias mappings, 25 unit spellings unified, 24 clinically reliable conversion factors** — so trends and alerts are always built on one consistent measurement system. Unknown units are kept as-is and clearly annotated.
+**EN**: Most AI report parsers output whatever name and unit the model feels like: `vitamin D / 25-OH-D / 25(OH)D` all over the place, `nmol/L` vs `ng/mL` incomparable. HomeHealth normalizes before storage: **106 alias mappings, 24 unit spellings unified, 24 clinically reliable conversion factors** — so trends and alerts are always built on one consistent measurement system. Interval results like `<0.1` / `>100` are carried with their comparator instead of being dropped. Unknown units are kept as-is and clearly annotated.
 
-**中文**：多数 AI 报告解析工具直接输出「模型认为的」指标名和原始单位，同一指标在不同报告中 `维生素D / 25-羟维生素D / 25(OH)D` 各写各的，`nmol/L` 与 `ng/mL` 数值不可比。HomeHealth 在入库前强制归一化：**110+ 指标别名映射、25 种单位写法统一、24 类跨单位医学换算系数**。未知单位保持原样并明确标注，绝不猜测。
+**中文**：多数 AI 报告解析工具直接输出「模型认为的」指标名和原始单位，同一指标在不同报告中 `维生素D / 25-羟维生素D / 25(OH)D` 各写各的，`nmol/L` 与 `ng/mL` 数值不可比。HomeHealth 在入库前强制归一化：**106 条指标别名映射、24 种单位写法统一、24 类跨单位医学换算系数**。`<0.1` / `>100` 这类区间型结果连同比较符一起入库，不再被丢弃。未知单位保持原样并明确标注，绝不猜测。
 
 ### 2. 👁️ Strict vision/text model separation | 视觉/文本模型严格分离
 
@@ -77,29 +77,41 @@ HomeHealth 面向多成员家庭，是一款本地优先、隐私至上的 Andro
 
 **中文**：报告解析必须用**视觉模型**（支持图片输入），健康问答用**文本模型**——两者独立配置、独立校验。误选文本模型解析图片会被运行时拦截并给出明确指引，而不是返回一堆幻觉数据。
 
-### 3. 🔌 7 LLM providers, dual protocol | 7 家 LLM 供应商，双协议适配
+### 3. 🚨 Three-rule anomaly detection | 三规则异常检测
+
+**EN**: Detection runs three complementary rules — **(1) Reference range** (sex-specific where it matters; interval results judged conservatively: `<0.1` only alerts "low" when the boundary itself is already below the limit), **(2) Trend** (three consecutive same-direction readings whose cumulative change exceeds a per-metric threshold, valid only within a 180-day window — readings two years apart are not a "trend"), **(3) Personal baseline** (current value vs the median of your own history, ≥5 samples — group reference ranges cannot answer "is this abnormal *for you*"). Deduplication = 7-day window + severity escalation: a relapsing condition can re-alert, a worsening one escalates.
+
+**中文**：异常检测由三条互补规则组成——**(1) 越界**（按性别取参考范围；区间型结果保守判断：`<0.1` 只有在边界值本身已低于下限时才报"偏低"），**(2) 趋势**（连续三次同向且累计变化超指标阈值，且三次读数须落在 180 天窗口内——跨两年的读数不构成"趋势"），**(3) 个体基线**（当前值对比自身历史中位数，至少 5 个样本——群体参考范围回答不了"对你来说是否异常"）。去重策略为「7 天窗口 + 严重度穿透」：症状复发能再次报警，病情恶化能升级报警。
+
+### 4. 📊 LLM call observability | LLM 调用可观测性
+
+**EN**: Every LLM call is logged to a local table: provider / model / scene (parsing vs Q&A) / latency / prompt & completion sizes / attempts / failure type (config vs network vs parse). The settings screen aggregates the last 30 days per provider — so "is it this provider or my network" is answerable from data. The log **never contains prompts or responses** — that would mean a second copy of your health data on the device.
+
+**中文**：每次 LLM 调用都会写入本地观测表：供应商 / 模型 / 场景（解析 vs 问答）/ 耗时 / 提示与补全字符数 / 重试次数 / 失败类型（配置 vs 网络 vs 解析）。设置页按供应商聚合近 30 天统计——「是这家供应商的问题还是我的网络」从此有数据可答。日志**绝不包含提示词与回复内容**——那等于在设备上再存一份健康数据。
+
+### 5. 🔌 7 LLM providers, dual protocol | 7 家 LLM 供应商，双协议适配
 
 **EN**: Zhipu GLM / OpenAI / Google Gemini / DeepSeek / Kimi / Tongyi Qwen / Anthropic Claude. Beyond the OpenAI-compatible protocol, Anthropic's **Messages API** is natively supported (separate system param, image base64 source format). Reasoning content (`reasoning_content` / `thinking`) from thinking models is rendered as a collapsible "reasoning process" block.
 
 **中文**：智谱 GLM / OpenAI / Gemini / DeepSeek / Kimi / 通义千问 / Anthropic Claude。除 OpenAI 兼容协议外，原生适配 **Anthropic Messages API**（system 独立传参、图片 base64 source 格式）。深度思考模型的 `reasoning_content` / `thinking` 会解析为可折叠的「思考过程」展示。
 
-### 4. 🔐 Truly local-first | 真正的本地优先
+### 6. 🔐 Truly local-first | 真正的本地优先
 
-**EN**: Health data, Q&A history and API keys live only in the on-device Room database. The LLM receives only the per-request summary when you explicitly trigger parsing or asking — no background data upload whatsoever. Fully usable without a key: an offline rule engine answers basic questions.
+**EN**: Health data and Q&A history live only in the on-device Room database. API keys are encrypted with **Android Keystore (AES-256-GCM)** — key material never leaves the TEE, and legacy plaintext keys are migrated in place. Android backup is disabled (`allowBackup="false"`), so none of it can be pulled out via `adb backup` or cloud backup. The LLM receives only the per-request summary when you explicitly trigger parsing or asking — no background data upload whatsoever. Fully usable without a key: an offline rule engine answers basic questions.
 
-**中文**：健康数据、问答历史、API Key 全部仅存于设备 Room 数据库；LLM 只在你主动触发解析/提问时收到**当次请求**所需的摘要，无任何后台数据上报。不配 Key 也完整可用——离线规则引擎兜底问答。
+**中文**：健康数据与问答历史仅存于设备 Room 数据库。API Key 经 **Android Keystore（AES-256-GCM）**加密存储——密钥材料不出 TEE，历史明文 Key 会就地平滑迁移。已关闭 Android 备份（`allowBackup="false"`），无法通过 `adb backup` 或云备份取出。LLM 只在你主动触发解析/提问时收到**当次请求**所需的摘要，无任何后台数据上报。不配 Key 也完整可用——离线规则引擎兜底问答。
 
-### 5. 📅 Calendar two-way sync | 用药提醒与系统日历联动
+### 7. 🌍 Bilingual alerts + UI | 双语告警与界面
+
+**EN**: Alerts are stored as **structured facts** (metric / direction / value / reference) rather than finished strings, and rendered in the current language at display time — switching the UI to English turns every alert into English, including historical ones. Full English / 中文 / follow-system switching via Android per-app locales. Light/dark/system theme modes; each of the five modules carries its own accent color that follows you through navigation.
+
+**中文**：告警以**结构化事实**（指标 / 方向 / 数值 / 参考范围）落库，而非成品文案，展示时按当前语言现场渲染——切到英文后所有告警（含历史告警）都显示英文。基于 Android per-app locale 的中英文/跟随系统语言切换；浅色/深色/跟随系统主题模式；五大模块各持独立主题色，切换页面时整页色彩随动。
+
+### 8. 📅 Calendar two-way sync | 用药提醒与系统日历联动
 
 **EN**: Reminders can be written into the system calendar with one tap (daily recurring events + 5-minute-ahead notifications). Deleting a reminder also cleans up its calendar events — dual-channel cleanup via stored event IDs plus a signature-based fallback for legacy events. No orphan calendar entries.
 
 **中文**：提醒可一键写入系统日历（每日重复事件 + 提前 5 分钟通知），**删除提醒时日历日程同步清理**（事件 ID 精确删除 + 签名兜底双通道），不产生孤儿日程。
-
-### 6. 🌍 Bilingual UI + theming | 双语界面与模块化主题
-
-**EN**: Full English / 中文 / follow-system language switching via Android per-app locales. Light/dark/system theme modes. Each of the five modules carries its own vibrant accent color that follows you through navigation — family health products can feel youthful too.
-
-**中文**：基于 Android per-app locale 的中英文/跟随系统语言切换；浅色/深色/跟随系统主题模式。五大模块各持独立活力主题色，切换页面时整页色彩随动——家庭健康产品也可以有青春朝气。
 
 ## ✨ Feature Overview | 功能全景
 
@@ -107,20 +119,21 @@ HomeHealth 面向多成员家庭，是一款本地优先、隐私至上的 Andro
 | --- | --- |
 | 👨‍👩‍👧‍👦 Multi-member family profiles · avatars | 多成员家庭档案 · 成员头像 |
 | 📸 Vision LLM report parsing · editable results | 视觉大模型报告解析 · 结果可编辑 |
-| 📐 Schema normalization (aliases / units / conversions) | 指标归一化（别名 / 单位 / 换算） |
+| 📐 Schema normalization (aliases / units / conversions / comparators) | 指标归一化（别名 / 单位 / 换算 / 比较符） |
 | ✏️ Full record lifecycle · dual-value blood pressure | 记录全生命周期 · 血压双值输入 |
 | 📈 Trend charts · latest / avg / high / low stats | 趋势折线图 · 最新/平均/最高/最低统计 |
-| 🚨 Rule-based anomaly alerts · severity levels · notifications | 规则引擎异常预警 · 分级 · 系统通知 |
+| 🚨 Three-rule anomaly alerts · severity levels · notifications | 三规则异常预警（越界/趋势/个体基线）· 分级 · 系统通知 |
+| 📊 LLM call logs · 30-day per-provider stats | LLM 调用日志 · 近 30 天按供应商统计 |
 | 💬 Record-grounded Q&A · reasoning display · offline engine | 基于记录的健康问答 · 思考过程 · 离线引擎 |
 | 💊 Medication reminders · calendar two-way sync | 用药提醒 · 日历双向联动 |
-| 🌍 English / 中文 UI · dark mode · per-module theming | 中英双语界面 · 深色模式 · 模块化主题 |
+| 🌍 English / 中文 UI (alerts included) · dark mode · per-module theming | 中英双语界面（含告警）· 深色模式 · 模块化主题 |
 | 🖼️ Splash screen · adaptive app icon | 启动页 · 自适应应用图标 |
 
 ## 🏗️ Tech Stack | 技术架构
 
-**EN**: Kotlin with coroutines & Flow · Jetpack Compose + Material 3 (single Activity + Navigation) · MVVM + Clean Architecture (`ui` / `domain` / `data`) · Hilt DI · Room v4 (progressive migrations) · OkHttp + Gson for LLM calls · WorkManager daily health checks · CalendarProvider integration. Built with AGP 9.4 / Kotlin 2.3 / compileSdk 37.
+**EN**: Kotlin with coroutines & Flow · Jetpack Compose + Material 3 (single Activity + Navigation) · MVVM + Clean Architecture (`ui` / `domain` / `data`) · Hilt DI · Room v7 (progressive migrations) · OkHttp + Gson for LLM calls · WorkManager daily health checks · CalendarProvider integration. Built with AGP 9.3 / Kotlin 2.3 / compileSdk 37 / minSdk 26.
 
-**中文**：Kotlin 协程 + Flow · Jetpack Compose + Material 3（单 Activity + Navigation）· MVVM + Clean Architecture（`ui` / `domain` / `data` 三层）· Hilt 依赖注入 · Room v4（渐进式迁移）· OkHttp + Gson（LLM 直连）· WorkManager 每日健康检查 · CalendarProvider 日历集成。基于 AGP 9.4 / Kotlin 2.3 / compileSdk 37 构建。
+**中文**：Kotlin 协程 + Flow · Jetpack Compose + Material 3（单 Activity + Navigation）· MVVM + Clean Architecture（`ui` / `domain` / `data` 三层）· Hilt 依赖注入 · Room v7（渐进式迁移）· OkHttp + Gson（LLM 直连）· WorkManager 每日健康检查 · CalendarProvider 日历集成。基于 AGP 9.3 / Kotlin 2.3 / compileSdk 37 / minSdk 26 构建。
 
 ```
 ┌───────────────────────────────────────────┐
@@ -133,17 +146,43 @@ HomeHealth 面向多成员家庭，是一款本地优先、隐私至上的 Andro
 │               Data Layer                  │
 │         Repository 实现 · Mapper          │
 │  ┌────────────────────┬───────────────┐   │
-│  │ Room 本地库 (6 表)  │ LlmClient     │   │
-│  │ 6 DAOs             │ (双协议)       │   │
+│  │ Room 本地库 (7 表)  │ LlmClient     │   │
+│  │ 7 DAOs             │ (双协议)       │   │
 │  └────────────────────┴───────────────┘   │
 └───────────────────────────────────────────┘
 ```
 
 **Key engineering decisions | 关键工程决策**
 
-- `@Upsert` instead of `INSERT OR REPLACE`: avoids REPLACE's DELETE+INSERT semantics triggering FK cascade deletion (a real-world lesson: editing a member once wiped their health records) — 用 `@Upsert` 替代 REPLACE，避免外键级联误删
-- Parsing catches `Throwable`, not just `Exception`: large-image OOM becomes a retryable failure state instead of a crash, with automatic recovery of stuck PROCESSING documents — 解析路径捕获 `Throwable`，OOM 转为可重试失败态，并有僵尸状态自动恢复
-- LLM calls go through raw OkHttp (streaming compatibility + fine-grained timeouts) — LLM 请求走 OkHttp 原生实现（流式兼容 + 超时精细控制）
+- **Never guess an unknown unit** — cross-unit conversion applies only when a clinically reliable factor exists; otherwise the original value and unit are kept as-is and annotated — 未知单位绝不猜测：只有存在可靠换算系数时才换算，否则保留原值与单位并明确标注
+- **Interval results are judged conservatively** — a reading reported as `<0.1` only raises a "below range" alert when the boundary itself already crosses the limit; "not sure whether it is out of range" is never reported as a definite conclusion — 区间型结果（`<0.1` / `>100`）按比较符保守判断，只有边界值本身已越界才下结论
+- **Deliberately *not* muting "stably elevated" values** — long-term BP at 135 is itself a signal worth seeing; the personal-baseline rule catches *changes from your own history*, it does not silence chronic readings — 有意不做「长期稳定偏高就静音」：个体基线规则捕捉的是"相对自身历史的变化"，不会掩盖慢性问题
+- **Trends need a time window** — three same-direction readings spanning two years are not a "sustained trend"; detection only fires within 180 days and the alert states the real span — 趋势判定有时间窗：跨两年的三次同向读数不构成"持续上升"，超出 180 天不判趋势
+- **Alert de-duplication = time window + severity escalation** — deduped within 7 days, but a worsening reading still gets through. Global de-duplication would make a relapsing condition permanently silent, which is worse than occasional noise — 预警去重为「7 天窗口 + 严重度穿透」：窗口内不重复，但病情恶化必须能升级报警
+- **Two independent privacy layers** — `allowBackup="false"` closes the backup-extraction path (adb / cloud); Android Keystore encryption (key material never leaves the TEE) raises the bar for offline `/data` dumps. Different threats — neither replaces the other — 两层互不替代的隐私防线：关闭备份导出通道 + Keystore 加密 API Key
+- **Observability without copying sensitive data** — `llm_call_logs` records latency / sizes / retries / failure types only; prompts and responses (which contain health metrics) are never logged — 可观测性不复制敏感数据：调用日志只记耗时/字符数/重试/失败类型，含健康指标的提示词与回复不入库
+- **`@Upsert` instead of `INSERT OR REPLACE`** — SQLite's REPLACE deletes then re-inserts, which fired FK cascade deletion and once wiped a member's health records — 用 `@Upsert` 替代 REPLACE，避免外键级联误删（真实的踩坑复盘）
+- **Parsing catches `Throwable`, not just `Exception`** — `OutOfMemoryError` is an `Error`; catching only `Exception` crashes the app. It is now a retryable failure state with stuck-state recovery — 解析路径捕获 `Throwable`，OOM 转为可重试失败态，并有僵尸状态恢复
+- **LLM calls go through raw OkHttp** (non-streaming single-shot request/response with fine-grained timeouts, exponential-backoff retry limited to 429/5xx/IO) — LLM 请求走 OkHttp 原生实现（非流式单次请求-响应 + 精细超时 + 仅对 429/5xx/IO 指数退避重试）
+
+### 🗄️ Database evolution | 数据库演进
+
+The Room schema is exported to `app/schemas/` (committed), and **every version bump ships with a hand-written migration**:
+
+| Version | Change |
+| --- | --- |
+| v1 → v2 | `family_members.heightCm` / `weightKg` |
+| v2 → v3 | `qa_history.thinking`（深度思考模型的思考过程） |
+| v3 → v4 | `medication_reminders.calendarEventIds` |
+| v4 → v5 | indices on `alerts(memberId)`、`health_records(memberId, type, recordDate)` |
+| v5 → v6 | `health_records.comparator`（承载 `<0.1` / `>100` 这类区间型结果） |
+| v6 → v7 | `llm_call_logs` 表（LLM 调用可观测性）+ `alerts` 7 列结构化告警字段 |
+
+- `fallbackToDestructiveMigration()` is deliberately **not** used: a version jump fails loudly instead of silently wiping the user's health records — 刻意不使用破坏性迁移兜底：宁可启动失败也不静默清库
+- An instrumented `MigrationTestHelper` test validates the **v4→v7 chain and the v6→v7 single hop** against the exported schemas and asserts that data survives (`gradlew connectedDebugAndroidTest`, requires a device/emulator) — 插桩迁移测试对导出 schema 校验 v4→v7 全链与 v6→v7 单跳，并断言数据不丢
+- 18 JVM unit tests cover `SchemaNormalizer` — conversions, unit canonicalization, comparator handling — plus **structural assertions on the dictionaries themselves**: every alias must point to a defined metric, metric types must be unique, and sex-specific ranges must be well-formed with low < high — 18 条 JVM 单测覆盖归一化层（换算 / 单位 / 比较符），并对字典本身做结构性断言：别名必须指向已定义指标、指标类型不得重复、性别区间必须上下限合法
+- Index names must match Room's generated `index_<table>_<column>` **character for character**, or opening the database throws `IllegalStateException` — 索引名必须与 Room 的生成规则逐字一致
+- ⚠️ **After bumping the DB version, build twice**: the androidTest asset merge does not depend on the schema-generation task, so a newly added `<N>.json` can miss the test APK on the first build (compilation still succeeds — the test only fails at runtime) — 升版本后要构建两次，否则迁移测试会在运行时找不到 schema
 
 ## 🤖 LLM Provider Support | LLM 供应商支持
 
@@ -162,7 +201,7 @@ HomeHealth 面向多成员家庭，是一款本地优先、隐私至上的 Andro
 
 **EN**
 
-- Android Studio Ladybug+ / JDK 17 / Android SDK 37 (min. Android 8.0 / API 26)
+- Android Studio Ladybug+ / JDK 17 (source compatibility) / Android SDK 37 (min. Android 8.0 / API 26)
 
 ```bash
 git clone https://github.com/Ada-Junk/HomeHealth.git
@@ -177,11 +216,13 @@ gradlew.bat assembleDebug
 
 Or open the project in Android Studio and hit Run. APK output: `app/build/outputs/apk/debug/`.
 
+> 🔧 **Build environment**: source compatibility is JDK 17, but the Gradle **daemon** JVM is pinned by `gradle/gradle-daemon-jvm.properties` (JDK 25 in the reference environment). That file is gitignored, so each machine keeps its own toolchain. Building from the command line therefore needs `JAVA_HOME` set to a matching JDK.
+
 > 💡 **Works out of the box**: family profiles, manual records, trend charts, alerts, medication reminders and offline Q&A all work without any LLM key. Fill in any provider's API key under *Settings → Report Parsing / Health Q&A Service* to unlock photo-based report parsing and AI Q&A.
 
 **中文**
 
-- Android Studio Ladybug 及以上 / JDK 17 / Android SDK 37（最低支持 Android 8.0 / API 26）
+- Android Studio Ladybug 及以上 / JDK 17（源码兼容级别）/ Android SDK 37（最低支持 Android 8.0 / API 26）
 
 ```bash
 git clone https://github.com/Ada-Junk/HomeHealth.git
@@ -196,6 +237,8 @@ gradlew.bat assembleDebug
 
 或直接用 Android Studio 打开项目，点击 Run。APK 输出在 `app/build/outputs/apk/debug/`。
 
+> 🔧 **构建环境说明**：源码兼容级别是 JDK 17，但 Gradle **daemon** 的 JVM 由 `gradle/gradle-daemon-jvm.properties` 指定（参考环境下为 JDK 25）。该文件已加入 `.gitignore`，每台机器保留自己的工具链；因此从命令行构建时需要把 `JAVA_HOME` 指向匹配的 JDK。
+
 > 💡 **开箱即用**：不配置任何 LLM Key 也能使用家庭档案、手动记录、趋势图、预警、用药提醒和离线健康问答；在「设置 → 报告解析服务 / 健康问答服务」中填入任意供应商的 API Key 后，即可解锁拍照解析报告和 AI 问答。
 
 ## 📁 Project Structure | 项目结构
@@ -204,30 +247,36 @@ gradlew.bat assembleDebug
 app/src/main/java/com/example/homehealth/
 ├── data/            # Data layer: Room, DAOs, LLM client, repository impls
 │   ├── remote/      #   LlmClient (dual protocol), LlmProviders, offline QA engine
-│   ├── local/       #   Room entities & DAOs (6 tables)
+│   ├── local/       #   Room entities & DAOs (7 tables incl. llm_call_logs)
 │   └── repository/  #   Repository implementations
 ├── domain/          # Domain layer: models, repository interfaces, use cases
 ├── di/              # Hilt modules (incl. progressive DB migrations)
 ├── ui/              # Compose UI: navigation, module themes, 8 screens
 ├── worker/          # WorkManager background jobs & notifications
-└── util/            # SchemaNormalizer, CalendarEventHelper, HealthTypes...
+└── util/            # SchemaNormalizer, HealthTypes, DetectionConfig, AlertText, SecretStore...
 ```
 
-Full design doc (Chinese): [docs/开发文档.md](./docs/开发文档.md)
+Design brief (pre-implementation, Chinese) — 实现前设计蓝图，与最终实现存在差异: [docs/开发文档.md](./docs/开发文档.md)
 
 ## 🗺️ Roadmap
 
-- [ ] More document types (imaging reports, etc.) — 支持更多文档类型（影像报告等）
+Q&A today is record-injection over long context — no chunking, embedding or retrieval yet. The evolution path, one step at a time:
+
+当前问答是「记录注入式长上下文」——尚无切分、向量与检索。演进路线一次一步：
+
+- [ ] **True RAG** for health Q&A: chunking + embeddings + top-K retrieval with citation of source records — 健康问答升级为真 RAG（切分 + 向量检索 + Top-K + 引用溯源）
+- [ ] **ReAct agent** over a toolset for parsing / normalization / detection / Q&A — 抽工具集串成 ReAct Agent
+- [ ] **MCP server** exposing health data tools — 以 MCP Server 暴露健康数据工具
+- [ ] **SSE streaming** responses — SSE 流式输出
+- [ ] On-device LLM inference, fully offline — 端侧 LLM 推理，完全离线运行
 - [ ] Health Connect wearable data — 集成 Health Connect 可穿戴设备数据
-- [ ] On-device LLM inference, fully offline — 本地 LLM 推理，完全离线运行
-- [ ] Multi-device sync (encrypted cloud backup) — 多设备同步（加密云备份）
-- [ ] Family data sharing & remote care — 家庭数据共享与远程关怀
+- [ ] More document types (imaging reports, etc.) — 支持更多文档类型（影像报告等）
 
 ## ⚠️ Disclaimer | 免责声明
 
-**EN**: Reference ranges, anomaly alerts and Q&A content provided by this project are for wellness management reference only and do **not constitute medical advice**. Consult a qualified physician for any health concerns.
+**EN**: Reference ranges, anomaly alerts and Q&A content provided by this project are for wellness management reference only and do **not constitute medical advice**. The reference-range dictionary covers common adult values with sex stratification only (no age stratification); always defer to the ranges printed on your own lab report. Consult a qualified physician for any health concerns.
 
-**中文**：本项目提供的指标参考范围、异常预警和问答内容**仅供健康管理参考，不构成医疗建议**。如有健康问题，请及时咨询专业医生。
+**中文**：本项目提供的指标参考范围、异常预警和问答内容**仅供健康管理参考，不构成医疗建议**。参考范围字典覆盖常见成人值、仅做性别分层（无年龄分层），请以你自己的化验单标注为准。如有健康问题，请及时咨询专业医生。
 
 ## 📄 License
 
