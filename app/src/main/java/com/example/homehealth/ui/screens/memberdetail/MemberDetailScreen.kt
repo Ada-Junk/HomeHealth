@@ -9,6 +9,7 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
@@ -71,6 +72,8 @@ fun MemberDetailScreen(
     var showAddRecordDialog by remember { mutableStateOf(false) }
 
     Scaffold(
+        // 同 SettingsScreen：外层已处理系统栏 inset，内层不再叠加（避免底部空带）
+        contentWindowInsets = WindowInsets(0, 0, 0, 0),
         topBar = {
             androidx.compose.material3.TopAppBar(
                 title = { Text(member?.name ?: stringResource(R.string.detail_title_default)) },

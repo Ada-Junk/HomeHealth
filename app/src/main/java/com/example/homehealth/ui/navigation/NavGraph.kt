@@ -1,5 +1,7 @@
 package com.example.homehealth.ui.navigation
 
+import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.ime
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Alarm
@@ -18,6 +20,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.stringResource
 import androidx.navigation.NavHostController
 import androidx.navigation.NavType
@@ -75,6 +78,10 @@ fun RootApp(navController: NavHostController, darkTheme: Boolean) {
     )
     val showBottomBar = currentRoute in bottomItems.map { it.route }
 
+    // 键盘弹出时隐藏底部导航：问答输入栏需要贴合键盘，导航栏被键盘盖住毫无意义，
+    // 且隐藏后外层 content padding 收缩，配合 imePadding/consumeWindowInsets 输入栏才能贴平键盘上沿
+    val imeVisible = WindowInsets.ime.getBottom(LocalDensity.current) > 0
+
     // 当前模块：底部页取自身模块；二级页（成员/记录/上传）归入家庭模块
     val currentModule = when {
         currentRoute == Routes.ALERTS -> ModuleTheme.ALERTS
@@ -87,7 +94,7 @@ fun RootApp(navController: NavHostController, darkTheme: Boolean) {
     ModuleThemedTheme(module = currentModule, darkTheme = darkTheme) {
         Scaffold(
             bottomBar = {
-                if (showBottomBar) {
+                if (showBottomBar && !imeVisible) {
                     NavigationBar {
                         bottomItems.forEach { item ->
                             val selected = currentRoute == item.route
@@ -123,7 +130,7 @@ fun RootApp(navController: NavHostController, darkTheme: Boolean) {
                                     )
                                 },
                                 colors = NavigationBarItemDefaults.colors(
-                                    indicatorColor = containerColor.copy(alpha = 0.85f)
+                                    indicatorColor = containerColor.copy(alpha = 0.9f)
                                 )
                             )
                         }

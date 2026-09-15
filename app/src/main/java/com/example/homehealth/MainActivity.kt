@@ -4,6 +4,7 @@ import android.Manifest
 import android.content.pm.PackageManager
 import android.os.Build
 import android.os.Bundle
+import androidx.activity.SystemBarStyle
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
@@ -13,11 +14,14 @@ import androidx.appcompat.app.AppCompatDelegate
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.platform.LocalContext
 import androidx.core.content.ContextCompat
 import androidx.core.os.LocaleListCompat
@@ -44,6 +48,20 @@ class MainActivity : AppCompatActivity() {
                 SettingsPrefs.THEME_LIGHT -> false
                 SettingsPrefs.THEME_DARK -> true
                 else -> isSystemInDarkTheme()
+            }
+            // 状态栏/导航栏图标的明暗必须跟随「应用内主题」而非系统主题：
+            // enableEdgeToEdge 的 auto 样式默认按系统深浅色判断，当设置页强制的
+            // 外观模式与系统不一致时，状态栏的时间/信号会与背景同色（不可见）。
+            // 按当前生效主题刷新系统栏样式；darkTheme 变化（切外观模式）时自动重刷。
+            LaunchedEffect(darkTheme) {
+                enableEdgeToEdge(
+                    statusBarStyle = SystemBarStyle.auto(
+                        Color.Transparent.toArgb(), Color.Transparent.toArgb()
+                    ) { darkTheme },
+                    navigationBarStyle = SystemBarStyle.auto(
+                        Color.Transparent.toArgb(), Color.Transparent.toArgb()
+                    ) { darkTheme }
+                )
             }
             HomeHealthTheme(darkTheme = darkTheme) {
                 val navController = rememberNavController()

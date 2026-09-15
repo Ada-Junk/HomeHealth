@@ -10,6 +10,7 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -110,6 +111,9 @@ fun SettingsScreen(
     }
 
     Scaffold(
+        // 外层 RootApp Scaffold 已处理系统栏 inset；内层默认再叠加 navigationBars inset，
+        // 会在内容底部垫出一条与背景同色的空带（即底部导航上方的“白条”）
+        contentWindowInsets = WindowInsets(0, 0, 0, 0),
         topBar = { androidx.compose.material3.TopAppBar(title = { Text(stringResource(R.string.settings_title)) }) },
         snackbarHost = { SnackbarHost(snackbarHostState) }
     ) { padding ->
