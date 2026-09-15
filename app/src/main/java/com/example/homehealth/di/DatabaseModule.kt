@@ -5,6 +5,7 @@ import androidx.room.Room
 import androidx.room.migration.Migration
 import androidx.sqlite.db.SupportSQLiteDatabase
 import com.example.homehealth.data.local.AppDatabase
+import com.example.homehealth.data.local.AppMigrationSql
 import com.example.homehealth.data.local.dao.AlertDao
 import com.example.homehealth.data.local.dao.FamilyMemberDao
 import com.example.homehealth.data.local.dao.HealthRecordDao
@@ -53,14 +54,11 @@ object DatabaseModule {
      * - health_records(memberId, type, recordDate)：覆盖「某成员某指标的最近 N 条」
      * 索引名由 Room 按 index_<表名>_<列名> 规则生成，必须与之逐字一致，
      * 否则打开数据库时的 schema 校验会直接抛 IllegalStateException。
+     * SQL 常量与 JVM 测试共用同一份（见 AppMigrationSql，防两端漂移）。
      */
     val MIGRATION_4_5 = object : Migration(4, 5) {
         override fun migrate(db: SupportSQLiteDatabase) {
-            db.execSQL("CREATE INDEX IF NOT EXISTS index_alerts_memberId ON alerts(memberId)")
-            db.execSQL(
-                "CREATE INDEX IF NOT EXISTS index_health_records_memberId_type_recordDate " +
-                    "ON health_records(memberId, type, recordDate)"
-            )
+            AppMigrationSql.V4_TO_V5.forEach(db::execSQL)
         }
     }
 
@@ -70,7 +68,7 @@ object DatabaseModule {
      */
     val MIGRATION_5_6 = object : Migration(5, 6) {
         override fun migrate(db: SupportSQLiteDatabase) {
-            db.execSQL("ALTER TABLE health_records ADD COLUMN comparator TEXT")
+            AppMigrationSql.V5_TO_V6.forEach(db::execSQL)
         }
     }
 
@@ -85,32 +83,7 @@ object DatabaseModule {
      */
     val MIGRATION_6_7 = object : Migration(6, 7) {
         override fun migrate(db: SupportSQLiteDatabase) {
-            db.execSQL(
-                "CREATE TABLE IF NOT EXISTS `llm_call_logs` (" +
-                    "`id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, " +
-                    "`provider` TEXT NOT NULL, " +
-                    "`model` TEXT NOT NULL, " +
-                    "`scene` TEXT NOT NULL, " +
-                    "`latencyMs` INTEGER NOT NULL, " +
-                    "`promptChars` INTEGER NOT NULL, " +
-                    "`completionChars` INTEGER NOT NULL, " +
-                    "`hasImage` INTEGER NOT NULL, " +
-                    "`attempts` INTEGER NOT NULL, " +
-                    "`ok` INTEGER NOT NULL, " +
-                    "`errorType` TEXT, " +
-                    "`createdAt` INTEGER NOT NULL)"
-            )
-            db.execSQL(
-                "CREATE INDEX IF NOT EXISTS `index_llm_call_logs_createdAt` " +
-                    "ON `llm_call_logs` (`createdAt`)"
-            )
-            db.execSQL("ALTER TABLE alerts ADD COLUMN metricType TEXT")
-            db.execSQL("ALTER TABLE alerts ADD COLUMN direction TEXT")
-            db.execSQL("ALTER TABLE alerts ADD COLUMN valueText TEXT")
-            db.execSQL("ALTER TABLE alerts ADD COLUMN unitText TEXT")
-            db.execSQL("ALTER TABLE alerts ADD COLUMN refText TEXT")
-            db.execSQL("ALTER TABLE alerts ADD COLUMN spanText TEXT")
-            db.execSQL("ALTER TABLE alerts ADD COLUMN baselineText TEXT")
+            AppMigrationSql.V6_TO_V7.forEach(db::execSQL)
         }
     }
 

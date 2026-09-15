@@ -105,6 +105,8 @@ dependencies {
 
     // 单元测试
     testImplementation("junit:junit:4.13.2")
+    // JVM 单测解析 Room schema 快照用（android.jar 里的 org.json 在本地单测中是 stub）
+    testImplementation("org.json:json:20240303")
     androidTestImplementation("androidx.test.ext:junit:1.1.5")
     androidTestImplementation("androidx.test.espresso:espresso-core:3.5.1")
     androidTestImplementation("androidx.room:room-testing:2.8.5")
