@@ -113,10 +113,12 @@ class LocalQaEngine @Inject constructor() {
         }
     }
 
-    private companion object {
+    companion object {
         /**
          * 口语化的成组说法：这些词不是任何单一指标的别名，命中后应展开为多项。
          * 保留原实现里「血脂」「胖/瘦」等口语习惯，同时补齐常见体检套餐的分组。
+         * 供问答检索的「强指标词」表复用（见 [QaRetriever.strongTermsOf]）——
+         * 成组词命中也应触发检索，成组词不是别名的第二份副本，理应单一来源。
          */
         val GROUP_KEYWORDS: Map<String, List<String>> = mapOf(
             "血脂" to listOf(

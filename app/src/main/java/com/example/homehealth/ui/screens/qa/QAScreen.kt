@@ -11,6 +11,8 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.imePadding
+import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.consumeWindowInsets
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.widthIn
@@ -48,6 +50,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.NavHostController
 import com.example.homehealth.R
 import com.example.homehealth.data.local.entity.QAHistory
+import com.example.homehealth.ui.components.MarkdownText
 import com.example.homehealth.ui.components.memberPickerLabel
 import com.example.homehealth.util.DateUtils
 
@@ -72,6 +75,8 @@ fun QAScreen(
     }
 
     Scaffold(
+        // 同 SettingsScreen：外层已处理系统栏 inset，内层不再叠加（避免底部空带）
+        contentWindowInsets = WindowInsets(0, 0, 0, 0),
         topBar = {
             androidx.compose.material3.TopAppBar(title = { Text(stringResource(R.string.qa_title)) })
         }
@@ -80,6 +85,9 @@ fun QAScreen(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(padding)
+                // 关键：消费掉 Scaffold 已使用的 inset，imePadding 只补键盘剩余高度——
+                // 否则「导航栏 inset + 键盘 inset」叠加，输入框会悬空在键盘上方一截
+                .consumeWindowInsets(padding)
                 .imePadding()
         ) {
             // 成员选择 + 提示
@@ -188,7 +196,7 @@ fun QAScreen(
                         Text(stringResource(R.string.qa_input_hint), style = MaterialTheme.typography.bodyMedium)
                     },
                     textStyle = MaterialTheme.typography.bodyMedium,
-                    maxLines = 2,
+                    maxLines = 3,
                     modifier = Modifier
                         .weight(1f)
                         .height(48.dp)
@@ -277,10 +285,8 @@ private fun ChatBubble(item: QAHistory) {
                 if (!item.thinking.isNullOrBlank()) {
                     ThinkingBlock(thinking = item.thinking!!)
                 }
-                Text(
-                    text = item.answer,
-                    style = MaterialTheme.typography.bodyMedium
-                )
+                // Markdown 渲染：LLM 回答的标题/列表/粗体/代码不再以裸符号显示
+                MarkdownText(markdown = item.answer)
                 if (!item.sources.isNullOrBlank()) {
                     Text(
                         text = stringResource(R.string.qa_sources, item.sources),

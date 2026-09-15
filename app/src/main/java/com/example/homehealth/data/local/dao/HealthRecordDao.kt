@@ -47,6 +47,16 @@ interface HealthRecordDao {
     )
     suspend fun getRecentByMember(memberId: String, limit: Int): List<HealthRecord>
 
+    /**
+     * 成员的全部记录（时间倒序）——供问答检索（BM25）建立语料。
+     *
+     * 检索必须看到全量历史才能回答"我最近 / 一直以来怎么样"，也才能在旧指标被问到时召回；
+     * 个人自用场景记录量在千级，单次按 memberId 索引查询读入内存是可接受的
+     * （上方 getRecentPerTypeByMember 的"每组 Top-N 限制"针对的是摘要路径，两条路径并存）。
+     */
+    @Query("SELECT * FROM health_records WHERE memberId = :memberId ORDER BY recordDate DESC")
+    suspend fun getAllByMember(memberId: String): List<HealthRecord>
+
     @Query(
         "SELECT * FROM health_records WHERE memberId = :memberId AND type = :type " +
             "ORDER BY recordDate DESC"
