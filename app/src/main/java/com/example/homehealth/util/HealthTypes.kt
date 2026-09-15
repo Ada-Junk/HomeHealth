@@ -5,19 +5,49 @@ import com.example.homehealth.R
 /**
  * 健康指标体系：覆盖体检报告常见全类别指标。
  * 每项含英文标识、中文名、单位、参考范围（展示文本 + 数值上下限用于异常检测）。
- * 参考范围为通用成人参考值（男女合并区间），仅供参考，实际以报告单标注为准。
+ *
+ * ⚠️ **参考范围的来源与适用范围（重要，别当成临床标准）**：
+ * - 这些区间是**通用成人参考值**，取自临床检验参考范围的通行口径，
+ *   但**未逐项标注权威出处与版本**（如具体指南 / 行业标准编号）。补齐出处是待办事项；
+ * - 只做了**性别分层**（血红蛋白 / 红细胞压积 / 肌酐 / 尿酸 / 血清铁 / 体脂率 / 腰围），
+ *   缺年龄、孕期等分层 —— 儿童、老年人、孕妇的区间与成人并不相同；
+ * - 因此这里的「偏高 / 偏低」仅用于**健康管理提示**，不构成诊断；实际以报告单标注为准。
+ *
+ * 参考范围分两层：通用层 [MetricDef.low] / [MetricDef.high] / [MetricDef.rangeText]，
+ * 性别层 [MetricDef.byGender]，取值统一走 [MetricDef.rangeFor]。
  */
 
-/** 单个指标定义 */
+/** 单项指标的参考区间（数值上下限 + 展示文字） */
+data class RefRange(
+    val low: Double?,          // 数值下限（null 表示无下限）
+    val high: Double?,         // 数值上限（null 表示无上限）
+    val text: String           // 展示文字
+)
+
+/**
+ * 单个指标定义。
+ *
+ * 参考范围分两层：
+ * - 通用层 low / high / rangeText：无性别差异时使用；
+ * - 性别层 byGender：血红蛋白、肌酐、尿酸等指标男女参考区间不同，必须分列，
+ *   否则用「男女合并区间」做异常检测会产生系统性漏报
+ *   （如男性 Hb 120 明显偏低，却因合并下界 115 而不报警）。
+ */
 data class MetricDef(
     val type: String,          // 英文标识（数据库存储 / LLM 输出）
     val label: String,         // 中文名
     val unit: String,          // 单位
-    val rangeText: String,     // 参考范围文字
+    val rangeText: String,     // 参考范围文字（通用 / 男女分列说明）
     val low: Double?,          // 数值下限（null 无）
     val high: Double?,         // 数值上限（null 无）
-    val group: String          // 所属分组
-)
+    val group: String,         // 所属分组
+    /** 性别特异参考区间，key 取值同 FamilyMember.gender：GENDER_MALE / GENDER_FEMALE */
+    val byGender: Map<String, RefRange> = emptyMap()
+) {
+    /** 按性别取参考区间；该指标无性别差异或性别未知时回退通用区间 */
+    fun rangeFor(gender: String?): RefRange =
+        byGender[gender] ?: RefRange(low, high, rangeText)
+}
 
 object HealthTypes {
 
@@ -30,6 +60,10 @@ object HealthTypes {
     const val LDL = "ldl"
     const val WEIGHT = "weight"
     const val HEART_RATE = "heart_rate"
+
+    // ---- 性别取值（与 FamilyMember.gender 保持一致）----
+    const val GENDER_MALE = "male"
+    const val GENDER_FEMALE = "female"
 
     /** 指标分组（key → 显示名），按展示顺序 */
     val GROUPS: List<Pair<String, String>> = listOf(
@@ -53,8 +87,20 @@ object HealthTypes {
         MetricDef(WEIGHT, "体重", "kg", "—", null, null, "vitals"),
         MetricDef("height", "身高", "cm", "—", null, null, "vitals"),
         MetricDef("bmi", "BMI 指数", "kg/m²", "18.5-23.9", 18.5, 23.9, "vitals"),
-        MetricDef("body_fat", "体脂率", "%", "男 10-20 / 女 18-28", 10.0, 28.0, "vitals"),
-        MetricDef("waist_circumference", "腰围", "cm", "男 <90 / 女 <85", null, 90.0, "vitals"),
+        MetricDef(
+            "body_fat", "体脂率", "%", "男 10-20 / 女 18-28", 10.0, 28.0, "vitals",
+            byGender = mapOf(
+                GENDER_MALE to RefRange(10.0, 20.0, "10-20"),
+                GENDER_FEMALE to RefRange(18.0, 28.0, "18-28")
+            )
+        ),
+        MetricDef(
+            "waist_circumference", "腰围", "cm", "男 <90 / 女 <85", null, 90.0, "vitals",
+            byGender = mapOf(
+                GENDER_MALE to RefRange(null, 90.0, "<90"),
+                GENDER_FEMALE to RefRange(null, 85.0, "<85")
+            )
+        ),
         MetricDef("body_temperature", "体温", "℃", "36.0-37.2", 36.0, 37.2, "vitals"),
         MetricDef("spo2", "血氧饱和度", "%", "95-100", 95.0, 100.0, "vitals"),
 
@@ -72,8 +118,20 @@ object HealthTypes {
         // ---- 血常规 ----
         MetricDef("wbc", "白细胞计数", "×10⁹/L", "3.5-9.5", 3.5, 9.5, "cbc"),
         MetricDef("rbc", "红细胞计数", "×10¹²/L", "3.8-5.8", 3.8, 5.8, "cbc"),
-        MetricDef("hemoglobin", "血红蛋白", "g/L", "男 130-175 / 女 115-150", 115.0, 175.0, "cbc"),
-        MetricDef("hematocrit", "红细胞压积", "%", "男 40-50 / 女 35-45", 35.0, 50.0, "cbc"),
+        MetricDef(
+            "hemoglobin", "血红蛋白", "g/L", "男 130-175 / 女 115-150", 115.0, 175.0, "cbc",
+            byGender = mapOf(
+                GENDER_MALE to RefRange(130.0, 175.0, "130-175"),
+                GENDER_FEMALE to RefRange(115.0, 150.0, "115-150")
+            )
+        ),
+        MetricDef(
+            "hematocrit", "红细胞压积", "%", "男 40-50 / 女 35-45", 35.0, 50.0, "cbc",
+            byGender = mapOf(
+                GENDER_MALE to RefRange(40.0, 50.0, "40-50"),
+                GENDER_FEMALE to RefRange(35.0, 45.0, "35-45")
+            )
+        ),
         MetricDef("mcv", "平均红细胞体积", "fL", "80-100", 80.0, 100.0, "cbc"),
         MetricDef("platelets", "血小板计数", "×10⁹/L", "125-350", 125.0, 350.0, "cbc"),
         MetricDef("neutrophil_ratio", "中性粒细胞比率", "%", "40-75", 40.0, 75.0, "cbc"),
@@ -87,9 +145,21 @@ object HealthTypes {
         MetricDef("albumin", "白蛋白", "g/L", "40-55", 40.0, 55.0, "liver"),
 
         // ---- 肾功能 ----
-        MetricDef("creatinine", "肌酐", "μmol/L", "男 57-97 / 女 41-73", 41.0, 97.0, "kidney"),
+        MetricDef(
+            "creatinine", "肌酐", "μmol/L", "男 57-97 / 女 41-73", 41.0, 97.0, "kidney",
+            byGender = mapOf(
+                GENDER_MALE to RefRange(57.0, 97.0, "57-97"),
+                GENDER_FEMALE to RefRange(41.0, 73.0, "41-73")
+            )
+        ),
         MetricDef("urea_nitrogen", "尿素氮", "mmol/L", "2.9-8.2", 2.9, 8.2, "kidney"),
-        MetricDef("uric_acid", "尿酸", "μmol/L", "男 208-428 / 女 155-357", 155.0, 428.0, "kidney"),
+        MetricDef(
+            "uric_acid", "尿酸", "μmol/L", "男 208-428 / 女 155-357", 155.0, 428.0, "kidney",
+            byGender = mapOf(
+                GENDER_MALE to RefRange(208.0, 428.0, "208-428"),
+                GENDER_FEMALE to RefRange(155.0, 357.0, "155-357")
+            )
+        ),
 
         // ---- 甲状腺 ----
         MetricDef("tsh", "促甲状腺激素", "mIU/L", "0.27-4.2", 0.27, 4.2, "thyroid"),
@@ -105,7 +175,13 @@ object HealthTypes {
         MetricDef("vitamin_c", "维生素C", "μmol/L", "28-71", 28.0, 71.0, "vitamins"),
         MetricDef("vitamin_d", "25-羟维生素D", "ng/mL", "30-100", 30.0, 100.0, "vitamins"),
         MetricDef("vitamin_e", "维生素E", "μmol/L", "11.6-46.4", 11.6, 46.4, "vitamins"),
-        MetricDef("serum_iron", "血清铁", "μmol/L", "男 11-30 / 女 9-27", 9.0, 30.0, "vitamins"),
+        MetricDef(
+            "serum_iron", "血清铁", "μmol/L", "男 11-30 / 女 9-27", 9.0, 30.0, "vitamins",
+            byGender = mapOf(
+                GENDER_MALE to RefRange(11.0, 30.0, "11-30"),
+                GENDER_FEMALE to RefRange(9.0, 27.0, "9-27")
+            )
+        ),
 
         // ---- 电解质 ----
         MetricDef("potassium", "血钾", "mmol/L", "3.5-5.3", 3.5, 5.3, "electrolytes"),
@@ -132,6 +208,10 @@ object HealthTypes {
     fun unit(type: String): String = DEF_MAP[type]?.unit ?: ""
 
     fun range(type: String): String = DEF_MAP[type]?.rangeText ?: "—"
+
+    /** 按性别取参考范围展示文字；该指标无性别差异或性别未知时回退通用文字 */
+    fun range(type: String, gender: String?): String =
+        DEF_MAP[type]?.rangeFor(gender)?.text ?: "—"
 
     // ---- UI 本地化：指标名 / 分组名的字符串资源 ----
 
@@ -203,15 +283,25 @@ object HealthTypes {
         else -> R.string.group_others
     }
 
-    /** 上升视为不良（用于趋势着色与预警措辞） */
+    /**
+     * 上升视为不良（用于趋势着色与预警措辞）。
+     * 白名单为「越高越好」的指标；血氧饱和度（spo2）虽在 95-100 区间，
+     * 但方向单调性上是越高越好，必须列入白名单，否则上升会被误染为告警色。
+     */
     fun higherIsWorse(type: String): Boolean = when (type) {
         HDL, ALBUMIN, "folate", "vitamin_a", "vitamin_b1", "vitamin_b6",
         "vitamin_b12", "vitamin_c", "vitamin_d", "vitamin_e", "serum_iron",
-        "height", "bone_density_t" -> false
+        "height", "bone_density_t", "spo2" -> false
         else -> true
     }
 
-    /** 趋势预警阈值：最近三次持续同向且累计变化超过阈值时生成预警 */
+    /**
+     * 每个指标的「有意义变化幅度」：最近三次同向且累计变化超过它才算趋势异常。
+     *
+     * 取值理由：该值与指标本身强相关（血糖 1.0 mmol/L 已是明显波动，尿酸要到 60 μmol/L 才是），
+     * 所以跟着指标字典走，而不放进 `DetectionConfig`（那里放与具体指标无关的全局窗口与样本数门槛）。
+     * 个体基线规则也**复用这张表**作为"相对自身显著变化"的阈值，保证两条规则口径一致。
+     */
     val TREND_THRESHOLDS: Map<String, Double> = mapOf(
         BLOOD_PRESSURE to 10.0,
         BLOOD_GLUCOSE to 1.0,

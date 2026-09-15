@@ -13,6 +13,6 @@ interface AlertRepository {
     suspend fun markRead(id: String)
     suspend fun markAllRead()
     suspend fun deleteAlert(id: String)
-    suspend fun getUnreadByMember(memberId: String): List<Alert>
+    suspend fun getByMemberSince(memberId: String, since: Long): List<Alert>
     suspend fun getAllAlerts(): List<Alert>
 }

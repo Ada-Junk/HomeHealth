@@ -199,7 +199,8 @@ fun MemberDetailScreen(
                 items(metrics, key = { it.type }) { metric ->
                     MetricCard(
                         metric = metric,
-                        higherIsWorse = viewModel.higherIsWorse(metric.type),
+                        higherIsWorse = HealthTypes.higherIsWorse(metric.type),
+                        gender = member?.gender,
                         onClick = {
                             navController.navigate(
                                 Routes.record(viewModel.memberId, metric.type)
@@ -236,6 +237,7 @@ fun MemberDetailScreen(
     // 手动添加健康指标（先选指标类型，再输入数值）
     if (showAddRecordDialog) {
         RecordInputDialog(
+            gender = member?.gender,
             onDismiss = { showAddRecordDialog = false },
             onConfirm = { type, primary, secondary, dateText, notes ->
                 viewModel.addRecord(type, primary, secondary, dateText, notes)
@@ -258,6 +260,7 @@ private fun SectionHeader(title: String) {
 private fun MetricCard(
     metric: MetricSummary,
     higherIsWorse: Boolean,
+    gender: String?,
     onClick: () -> Unit
 ) {
     Card(
@@ -293,7 +296,7 @@ private fun MetricCard(
                     text = listOf(
                         relativeTime(metric.latest.recordDate),
                         stringResource(R.string.detail_record_count, metric.count),
-                        stringResource(R.string.detail_reference, HealthTypes.range(metric.type))
+                        stringResource(R.string.detail_reference, HealthTypes.range(metric.type, gender))
                     ).joinToString(" · "),
                     style = MaterialTheme.typography.labelMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,

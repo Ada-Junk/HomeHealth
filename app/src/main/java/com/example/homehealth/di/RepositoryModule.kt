@@ -4,12 +4,14 @@ import com.example.homehealth.data.repository.AlertRepositoryImpl
 import com.example.homehealth.data.repository.DocumentRepositoryImpl
 import com.example.homehealth.data.repository.FamilyRepositoryImpl
 import com.example.homehealth.data.repository.HealthRecordRepositoryImpl
+import com.example.homehealth.data.repository.LlmCallLogRepositoryImpl
 import com.example.homehealth.data.repository.MedicationReminderRepositoryImpl
 import com.example.homehealth.data.repository.QARepositoryImpl
 import com.example.homehealth.domain.repository.AlertRepository
 import com.example.homehealth.domain.repository.DocumentRepository
 import com.example.homehealth.domain.repository.FamilyRepository
 import com.example.homehealth.domain.repository.HealthRecordRepository
+import com.example.homehealth.domain.repository.LlmCallLogRepository
 import com.example.homehealth.domain.repository.MedicationReminderRepository
 import com.example.homehealth.domain.repository.QARepository
 import dagger.Binds
@@ -45,4 +47,8 @@ abstract class RepositoryModule {
     @Binds
     @Singleton
     abstract fun bindQARepository(impl: QARepositoryImpl): QARepository
+
+    @Binds
+    @Singleton
+    abstract fun bindLlmCallLogRepository(impl: LlmCallLogRepositoryImpl): LlmCallLogRepository
 }

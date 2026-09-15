@@ -4,6 +4,7 @@ import android.content.ContentValues
 import android.content.Context
 import android.provider.CalendarContract
 import java.util.Calendar
+import java.util.TimeZone
 import java.util.concurrent.TimeUnit
 
 /**
@@ -74,7 +75,8 @@ object CalendarEventHelper {
                 )
                 put(CalendarContract.Events.DTSTART, start)
                 put(CalendarContract.Events.DTEND, end)
-                put(CalendarContract.Events.EVENT_TIMEZONE, "Asia/Shanghai")
+                // 用设备当前时区：硬编码 "Asia/Shanghai" 会让非东八区用户的事件时间整体偏移
+                put(CalendarContract.Events.EVENT_TIMEZONE, TimeZone.getDefault().id)
                 put(CalendarContract.Events.RRULE, "FREQ=DAILY")
                 put(CalendarContract.Events.HAS_ALARM, 1)
             }

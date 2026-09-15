@@ -39,8 +39,13 @@ interface AlertDao {
     @Query("SELECT COUNT(*) FROM alerts WHERE memberId = :memberId AND isRead = 0")
     fun observeUnreadCount(memberId: String): Flow<Int>
 
-    @Query("SELECT * FROM alerts WHERE memberId = :memberId AND isRead = 0")
-    suspend fun getUnreadByMember(memberId: String): List<Alert>
+    /**
+     * 取某成员在指定时间之后生成的预警（用于预警去重的时间窗口判断）。
+     * 只带上时间下界、不取全量历史：避免"报过一次就永远不再报"，
+     * 也避免预警表随时间无限膨胀后被整表读入内存。
+     */
+    @Query("SELECT * FROM alerts WHERE memberId = :memberId AND createdDate >= :since")
+    suspend fun getByMemberSince(memberId: String, since: Long): List<Alert>
 
     @Query("SELECT * FROM alerts ORDER BY createdDate DESC")
     suspend fun getAll(): List<Alert>

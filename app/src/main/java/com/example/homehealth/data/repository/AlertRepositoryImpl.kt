@@ -28,8 +28,8 @@ class AlertRepositoryImpl @Inject constructor(
 
     override suspend fun deleteAlert(id: String) = alertDao.deleteById(id)
 
-    override suspend fun getUnreadByMember(memberId: String): List<Alert> =
-        alertDao.getUnreadByMember(memberId)
+    override suspend fun getByMemberSince(memberId: String, since: Long): List<Alert> =
+        alertDao.getByMemberSince(memberId, since)
 
     override suspend fun getAllAlerts(): List<Alert> = alertDao.getAll()
 }

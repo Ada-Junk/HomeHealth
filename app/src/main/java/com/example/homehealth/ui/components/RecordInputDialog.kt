@@ -40,6 +40,8 @@ import java.util.Locale
 fun RecordInputDialog(
     fixedType: String? = null,
     existing: HealthRecord? = null,
+    /** 成员性别：用于按性别取参考范围做「异常值」提醒；未知时回退通用区间 */
+    gender: String? = null,
     onDismiss: () -> Unit,
     onConfirm: (
         type: String,
@@ -71,6 +73,8 @@ fun RecordInputDialog(
     var notes by remember(existing) { mutableStateOf(existing?.notes ?: "") }
     var showDatePicker by remember { mutableStateOf(false) }
     var error by remember { mutableStateOf(false) }
+    // 数值与参考范围相差数倍时要求再确认一次（针对多打一位、漏小数点这类笔误）
+    var needsConfirm by remember { mutableStateOf(false) }
 
     val isBloodPressure = selectedType == HealthTypes.BLOOD_PRESSURE
 
@@ -104,7 +108,7 @@ fun RecordInputDialog(
                     Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                         OutlinedTextField(
                             value = primary,
-                            onValueChange = { primary = it; error = false },
+                            onValueChange = { primary = it; error = false; needsConfirm = false },
                             label = { Text(stringResource(R.string.record_systolic)) },
                             isError = error,
                             singleLine = true,
@@ -112,7 +116,7 @@ fun RecordInputDialog(
                         )
                         OutlinedTextField(
                             value = secondary,
-                            onValueChange = { secondary = it; error = false },
+                            onValueChange = { secondary = it; error = false; needsConfirm = false },
                             label = { Text(stringResource(R.string.record_diastolic)) },
                             isError = error,
                             singleLine = true,
@@ -122,7 +126,7 @@ fun RecordInputDialog(
                 } else {
                     OutlinedTextField(
                         value = primary,
-                        onValueChange = { primary = it; error = false },
+                        onValueChange = { primary = it; error = false; needsConfirm = false },
                         label = { Text(stringResource(R.string.record_value_unit, HealthTypes.unit(selectedType))) },
                         isError = error,
                         singleLine = true,
@@ -146,6 +150,16 @@ fun RecordInputDialog(
                         style = MaterialTheme.typography.labelMedium
                     )
                 }
+                if (needsConfirm) {
+                    Text(
+                        stringResource(
+                            R.string.record_value_suspicious,
+                            HealthTypes.def(selectedType)?.rangeFor(gender)?.text.orEmpty()
+                        ),
+                        color = MaterialTheme.colorScheme.error,
+                        style = MaterialTheme.typography.labelMedium
+                    )
+                }
             }
         },
         confirmButton = {
@@ -154,10 +168,11 @@ fun RecordInputDialog(
                 val s = secondary.trim()
                 val primaryOk = p.toDoubleOrNull() != null
                 val secondaryOk = !isBloodPressure || s.toDoubleOrNull() != null
-                if (p.isEmpty() || !primaryOk || !secondaryOk) {
-                    error = true
-                } else {
-                    onConfirm(selectedType, p, s.ifBlank { null }, dateText, notes)
+                when {
+                    p.isEmpty() || !primaryOk || !secondaryOk -> error = true
+                    // 数值远离参考范围数倍 → 先要一次确认，避免笔误被当成真实读数入库
+                    !needsConfirm && isSuspiciousValue(selectedType, p, gender) -> needsConfirm = true
+                    else -> onConfirm(selectedType, p, s.ifBlank { null }, dateText, notes)
                 }
             }) { Text(stringResource(R.string.common_save)) }
         },
@@ -188,3 +203,21 @@ fun RecordInputDialog(
         }
     }
 }
+
+/**
+ * 数值是否"可疑"：与参考范围相差 [SUSPICIOUS_FACTOR] 倍以上。
+ *
+ * 用途是抓**录入笔误**（多打一位、漏小数点），不是判断异常 —— 真正偏高偏低的值只要在
+ * 合理量级就应当直接保存，健康管理工具的核心功能正是记录这些异常值。
+ * 因此宁可放宽阈值，也不要在正常偏差上打扰用户。
+ */
+private fun isSuspiciousValue(type: String, primary: String, gender: String?): Boolean {
+    val ref = HealthTypes.def(type)?.rangeFor(gender) ?: return false
+    val v = primary.toDoubleOrNull() ?: return false
+    val tooHigh = ref.high?.let { it > 0 && v > it * SUSPICIOUS_FACTOR } ?: false
+    val tooLow = ref.low?.let { it > 0 && v < it / SUSPICIOUS_FACTOR } ?: false
+    return tooHigh || tooLow
+}
+
+/** 偏离参考范围多少倍算"可疑"（针对笔误，故取值宽松） */
+private const val SUSPICIOUS_FACTOR = 3.0

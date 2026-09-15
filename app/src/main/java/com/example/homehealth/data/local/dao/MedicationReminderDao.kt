@@ -31,6 +31,10 @@ interface MedicationReminderDao {
     @Query("SELECT * FROM medication_reminders ORDER BY medicationName")
     suspend fun getAll(): List<MedicationReminder>
 
+    /** 按成员取提醒（删除成员时用于同步清理已写入系统日历的事件） */
+    @Query("SELECT * FROM medication_reminders WHERE memberId = :memberId")
+    suspend fun getByMember(memberId: String): List<MedicationReminder>
+
     /** 插入或更新：主键已存在时执行 UPDATE（裸 @Insert 会抛唯一约束异常导致闪退） */
     @Upsert
     suspend fun upsert(reminder: MedicationReminder)

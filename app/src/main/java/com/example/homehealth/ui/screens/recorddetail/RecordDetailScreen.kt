@@ -56,6 +56,7 @@ fun RecordDetailScreen(
     viewModel: RecordDetailViewModel = hiltViewModel()
 ) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
+    val memberGender by viewModel.memberGender.collectAsStateWithLifecycle()
     val label = stringResource(HealthTypes.labelRes(viewModel.type))
     var showAddDialog by remember { mutableStateOf(false) }
     var editTarget by remember { mutableStateOf<HealthRecord?>(null) }
@@ -126,7 +127,7 @@ fun RecordDetailScreen(
                 }
                 item {
                     Text(
-                        stringResource(R.string.record_reference_range, HealthTypes.range(viewModel.type)),
+                        stringResource(R.string.record_reference_range, HealthTypes.range(viewModel.type, memberGender)),
                         style = MaterialTheme.typography.labelMedium,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
@@ -186,6 +187,7 @@ fun RecordDetailScreen(
     if (showAddDialog) {
         RecordInputDialog(
             fixedType = viewModel.type,
+            gender = memberGender,
             onDismiss = { showAddDialog = false },
             onConfirm = { _, primary, secondary, dateText, notes ->
                 viewModel.addRecord(primary, secondary, dateText, notes)
@@ -199,6 +201,7 @@ fun RecordDetailScreen(
         RecordInputDialog(
             fixedType = viewModel.type,
             existing = record,
+            gender = memberGender,
             onDismiss = { editTarget = null },
             onConfirm = { _, primary, secondary, dateText, notes ->
                 viewModel.updateRecord(record, primary, secondary, dateText, notes)

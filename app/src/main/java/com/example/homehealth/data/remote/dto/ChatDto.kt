@@ -63,6 +63,8 @@ data class ChatError(
 /** Anthropic Messages API 响应（content 为分块数组，拼接 type=text 的块） */
 data class AnthropicResponse(
     val content: List<AnthropicContentPart>? = null,
+    /** 停止原因：max_tokens 表示输出被长度上限截断，需与本应用已解析出的字段区分处理 */
+    @SerializedName("stop_reason") val stopReason: String? = null,
     val error: ChatError? = null
 )
 

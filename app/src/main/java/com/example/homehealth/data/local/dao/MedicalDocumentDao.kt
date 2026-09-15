@@ -27,6 +27,10 @@ interface MedicalDocumentDao {
     @Query("SELECT * FROM medical_documents ORDER BY uploadDate DESC")
     suspend fun getAll(): List<MedicalDocument>
 
+    /** 按成员取文档（删除成员时用于清理其本地图片文件） */
+    @Query("SELECT * FROM medical_documents WHERE memberId = :memberId")
+    suspend fun getByMember(memberId: String): List<MedicalDocument>
+
     @Query("SELECT * FROM medical_documents WHERE parseStatus = :status")
     suspend fun getByStatus(status: ParseStatus): List<MedicalDocument>
 

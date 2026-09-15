@@ -1,6 +1,7 @@
 package com.example.homehealth.ui.screens.settings
 
 import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
@@ -12,6 +13,7 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Delete
@@ -21,6 +23,7 @@ import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.FilterChip
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -52,11 +55,13 @@ import com.example.homehealth.R
 import com.example.homehealth.data.SettingsPrefs
 import com.example.homehealth.data.local.entity.FamilyMember
 import com.example.homehealth.data.remote.LlmProviders
-import com.example.homehealth.ui.components.DropdownSelector
+import com.example.homehealth.domain.model.LlmCallStats
 import com.example.homehealth.ui.components.MemberEditDialog
+import com.example.homehealth.ui.components.StatItem
 import com.example.homehealth.ui.components.relationshipLabel
 import com.example.homehealth.util.DateUtils
 import com.example.homehealth.util.FileUtils
+import kotlinx.coroutines.delay
 
 /** 设置页：成员管理 / 解析服务 / 数据导出 / 健康检查 / 关于 */
 @OptIn(ExperimentalMaterial3Api::class)
@@ -69,13 +74,19 @@ fun SettingsScreen(
     val members by viewModel.members.collectAsStateWithLifecycle()
     val parseProvider by viewModel.parseProvider.collectAsStateWithLifecycle()
     val parseApiKey by viewModel.parseApiKey.collectAsStateWithLifecycle()
+    val parseKeyUnreadable by viewModel.parseKeyUnreadable.collectAsStateWithLifecycle()
     val parseModel by viewModel.parseModel.collectAsStateWithLifecycle()
     val qaProvider by viewModel.qaProvider.collectAsStateWithLifecycle()
     val qaApiKey by viewModel.qaApiKey.collectAsStateWithLifecycle()
+    val qaKeyUnreadable by viewModel.qaKeyUnreadable.collectAsStateWithLifecycle()
     val qaModel by viewModel.qaModel.collectAsStateWithLifecycle()
     val themeMode by viewModel.themeMode.collectAsStateWithLifecycle()
     val languageMode by viewModel.languageMode.collectAsStateWithLifecycle()
+    val llmStats by viewModel.llmStats.collectAsStateWithLifecycle()
     val snackbarHostState = remember { SnackbarHostState() }
+
+    // 进入设置页时刷新一次调用统计
+    LaunchedEffect(Unit) { viewModel.refreshLlmStats() }
 
     var showAddMember by remember { mutableStateOf(false) }
     var editTarget by remember { mutableStateOf<FamilyMember?>(null) }
@@ -234,6 +245,7 @@ fun SettingsScreen(
                     apiKey = parseApiKey,
                     model = parseModel,
                     vision = true,
+                    keyUnreadable = parseKeyUnreadable,
                     onProviderChange = viewModel::setParseProvider,
                     onApiKeyChange = viewModel::setParseApiKey,
                     onModelChange = viewModel::setParseModel
@@ -251,10 +263,62 @@ fun SettingsScreen(
                     apiKey = qaApiKey,
                     model = qaModel,
                     vision = false,
+                    keyUnreadable = qaKeyUnreadable,
                     onProviderChange = viewModel::setQaProvider,
                     onApiKeyChange = viewModel::setQaApiKey,
                     onModelChange = viewModel::setQaModel
                 )
+            }
+
+            // ---- LLM 调用统计 ----
+            item {
+                SectionTitle(stringResource(R.string.settings_llm_stats_section))
+            }
+            item {
+                Card(modifier = Modifier.fillMaxWidth()) {
+                    Column(
+                        modifier = Modifier
+                            .padding(16.dp)
+                            .fillMaxWidth(),
+                        verticalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        Text(
+                            stringResource(R.string.settings_llm_stats_window),
+                            style = MaterialTheme.typography.labelMedium,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceEvenly
+                        ) {
+                            StatItem(stringResource(R.string.settings_llm_calls), llmStats.total.toString())
+                            StatItem(stringResource(R.string.settings_llm_failures), llmStats.failures.toString())
+                            StatItem(
+                                stringResource(R.string.settings_llm_avg_latency),
+                                stringResource(R.string.settings_llm_latency_ms, llmStats.avgLatencyMs)
+                            )
+                        }
+                        Text(
+                            stringResource(
+                                R.string.settings_llm_chars,
+                                llmStats.totalPromptChars,
+                                llmStats.totalCompletionChars
+                            ),
+                            style = MaterialTheme.typography.labelSmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                        llmStats.byProvider.forEach { stat ->
+                            Text(
+                                stringResource(
+                                    R.string.settings_llm_provider_line,
+                                    stat.provider, stat.total, stat.failures
+                                ),
+                                style = MaterialTheme.typography.labelSmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
+                    }
+                }
             }
 
             // ---- 数据 ----
@@ -419,6 +483,7 @@ private fun ProviderSettingsCard(
     apiKey: String,
     model: String,
     vision: Boolean,
+    keyUnreadable: Boolean,
     onProviderChange: (String) -> Unit,
     onApiKeyChange: (String) -> Unit,
     onModelChange: (String) -> Unit
@@ -453,23 +518,20 @@ private fun ProviderSettingsCard(
                 )
                 if (provider == p.id) {
                     Spacer(Modifier.height(10.dp))
-                    ApiKeyField(apiKey = apiKey, onApiKeyChange = onApiKeyChange)
+                    ApiKeyField(
+                        apiKey = apiKey,
+                        keyUnreadable = keyUnreadable,
+                        onApiKeyChange = onApiKeyChange
+                    )
 
-                    // 模型下拉选择（供应商预设模型清单）
+                    // 模型配置：允许自由输入，预设清单只作快捷填入
                     if (models.isNotEmpty()) {
                         Spacer(Modifier.height(8.dp))
-                        val display = model.ifBlank {
-                            stringResource(R.string.settings_model_default, models.first())
-                        }
-                        DropdownSelector(
-                            options = models,
-                            selected = display,
-                            label = stringResource(
-                                if (vision) R.string.settings_vision_model_label
-                                else R.string.settings_text_model_label
-                            ),
-                            onSelect = { onModelChange(it) },
-                            modifier = Modifier.fillMaxWidth()
+                        ModelSelector(
+                            models = models,
+                            model = model,
+                            vision = vision,
+                            onModelChange = onModelChange
                         )
                     }
                 }
@@ -478,9 +540,94 @@ private fun ProviderSettingsCard(
     }
 }
 
-/** API Key 输入（密码遮罩 + 显示切换） */
+/**
+ * 模型配置控件。
+ *
+ * 刻意做成「可自由输入的文本框 + 预设快捷填入」，而不是只读下拉：
+ * 供应商的模型型号更新频繁，硬编码的预设清单必然滞后，
+ * 只给下拉会让用户在预设过期后完全无法使用该供应商的新模型。
+ * 留空表示使用该供应商的默认模型（沿用原有语义）。
+ *
+ * 输入采用**本地草稿 + 400ms 防抖**提交：逐字符落盘既浪费，也会在进程被杀时存下半截模型名。
+ */
 @Composable
-private fun ApiKeyField(apiKey: String, onApiKeyChange: (String) -> Unit) {
+private fun ModelSelector(
+    models: List<String>,
+    model: String,
+    vision: Boolean,
+    onModelChange: (String) -> Unit
+) {
+    var draft by remember { mutableStateOf(model) }
+    // 外部改动（预设芯片、切换供应商清空）时同步回输入框
+    LaunchedEffect(model) {
+        if (model != draft) draft = model
+    }
+    // 防抖提交：停止输入 400ms 后才写入，避免逐字符落盘
+    LaunchedEffect(draft) {
+        if (draft == model) return@LaunchedEffect
+        delay(MODEL_INPUT_DEBOUNCE_MS)
+        if (draft != model) onModelChange(draft)
+    }
+
+    OutlinedTextField(
+        value = draft,
+        onValueChange = { draft = it },
+        label = {
+            Text(
+                stringResource(
+                    if (vision) R.string.settings_vision_model_label
+                    else R.string.settings_text_model_label
+                )
+            )
+        },
+        supportingText = {
+            Text(
+                if (model.isBlank()) {
+                    stringResource(R.string.settings_model_default, models.first())
+                } else {
+                    stringResource(R.string.settings_model_custom_hint)
+                }
+            )
+        },
+        singleLine = true,
+        modifier = Modifier.fillMaxWidth()
+    )
+    Spacer(Modifier.height(6.dp))
+    Text(
+        text = stringResource(R.string.settings_model_presets),
+        style = MaterialTheme.typography.labelSmall,
+        color = MaterialTheme.colorScheme.onSurfaceVariant
+    )
+    Spacer(Modifier.height(4.dp))
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .horizontalScroll(rememberScrollState()),
+        horizontalArrangement = Arrangement.spacedBy(8.dp)
+    ) {
+        models.forEach { preset ->
+            FilterChip(
+                selected = model == preset,
+                onClick = {
+                    draft = preset
+                    onModelChange(preset)
+                },
+                label = { Text(preset) }
+            )
+        }
+    }
+}
+
+/** 模型输入防抖时长（毫秒） */
+private const val MODEL_INPUT_DEBOUNCE_MS = 400L
+
+/** API Key 输入（密码遮罩 + 显示切换）；密钥库失效导致解不开时给出专门提示 */
+@Composable
+private fun ApiKeyField(
+    apiKey: String,
+    keyUnreadable: Boolean,
+    onApiKeyChange: (String) -> Unit
+) {
     var key by remember(apiKey) { mutableStateOf(apiKey) }
     var keyVisible by remember { mutableStateOf(false) }
     OutlinedTextField(
@@ -491,6 +638,12 @@ private fun ApiKeyField(apiKey: String, onApiKeyChange: (String) -> Unit) {
         },
         label = { Text("API Key") },
         singleLine = true,
+        isError = keyUnreadable,
+        supportingText = if (keyUnreadable) {
+            { Text(stringResource(R.string.settings_key_unreadable)) }
+        } else {
+            null
+        },
         visualTransformation = if (keyVisible) {
             androidx.compose.ui.text.input.VisualTransformation.None
         } else {

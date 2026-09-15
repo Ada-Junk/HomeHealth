@@ -11,6 +11,7 @@ import com.example.homehealth.domain.repository.HealthRecordRepository
 import com.example.homehealth.domain.usecase.DetectAnomaliesUseCase
 import com.example.homehealth.util.DateUtils
 import com.example.homehealth.util.HealthTypes
+import com.example.homehealth.util.SchemaNormalizer
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
@@ -73,14 +74,6 @@ class MemberDetailViewModel @Inject constructor(
     val unreadAlerts: StateFlow<Int> = alertRepository.observeUnreadCount(memberId)
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), 0)
 
-    /** 上升视为不良的指标（用于趋势着色） */
-    fun higherIsWorse(type: String): Boolean = when (type) {
-        HealthTypes.BLOOD_PRESSURE, HealthTypes.BLOOD_GLUCOSE,
-        HealthTypes.TOTAL_CHOLESTEROL, HealthTypes.TRIGLYCERIDES,
-        HealthTypes.LDL, HealthTypes.HEART_RATE -> true
-        else -> false
-    }
-
     /** 手动添加健康记录（档案页「添加指标」）：保存后自动执行异常检测 */
     fun addRecord(
         type: String,
@@ -91,7 +84,10 @@ class MemberDetailViewModel @Inject constructor(
     ) {
         val value = if (secondary.isNullOrBlank()) primary.trim()
         else "${primary.trim()}/${secondary.trim()}"
-        val numeric = value.split("/").firstOrNull()?.trim()?.toDoubleOrNull()
+        // 支持手动输入区间型结果（"<0.1" / ">100"）：拆出比较符，否则 numericValue 为空会被检测跳过
+        val (comparator, numeric) = SchemaNormalizer.parseComparator(
+            value.split("/").firstOrNull()?.trim().orEmpty()
+        )
         val date = DateUtils.parseDate(dateText) ?: System.currentTimeMillis()
         viewModelScope.launch {
             healthRecordRepository.addRecord(
@@ -104,7 +100,8 @@ class MemberDetailViewModel @Inject constructor(
                     unit = HealthTypes.unit(type),
                     recordDate = date,
                     sourceDocumentId = null,
-                    notes = notes?.trim()?.ifBlank { null }
+                    notes = notes?.trim()?.ifBlank { null },
+                    comparator = comparator
                 )
             )
             detectAnomalies(memberId)

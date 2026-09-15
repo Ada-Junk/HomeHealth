@@ -17,7 +17,10 @@ import com.example.homehealth.domain.repository.AlertRepository
 import com.example.homehealth.domain.repository.DocumentRepository
 import com.example.homehealth.domain.repository.FamilyRepository
 import com.example.homehealth.domain.repository.HealthRecordRepository
+import com.example.homehealth.domain.repository.LlmCallLogRepository
 import com.example.homehealth.domain.repository.MedicationReminderRepository
+import com.example.homehealth.domain.model.LlmCallRecord
+import com.example.homehealth.domain.model.LlmCallStats
 import com.example.homehealth.domain.repository.QARepository
 import com.example.homehealth.worker.DailyCheckWorker
 import androidx.work.OneTimeWorkRequestBuilder
@@ -30,6 +33,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -55,6 +59,7 @@ class SettingsViewModel @Inject constructor(
     private val medicationReminderRepository: MedicationReminderRepository,
     private val documentRepository: DocumentRepository,
     private val qaRepository: QARepository,
+    private val llmCallLogRepository: LlmCallLogRepository,
     private val settingsPrefs: SettingsPrefs,
     private val gson: Gson
 ) : ViewModel() {
@@ -91,6 +96,12 @@ class SettingsViewModel @Inject constructor(
     // ---- 报告解析服务配置 ----
     val parseProvider = MutableStateFlow(settingsPrefs.parseProvider)
     val parseApiKey = MutableStateFlow(settingsPrefs.parseApiKey)
+
+    /**
+     * 已保存的 Key 存在但无法解密（Keystore 失效），需提示用户重新填写。
+     * 声明顺序有意放在 [parseApiKey] 之后：读取 Key 时才会触发解密并刷新该状态。
+     */
+    val parseKeyUnreadable = MutableStateFlow(settingsPrefs.parseKeyUnreadable)
     val parseModel = MutableStateFlow(settingsPrefs.parseModel)
 
     fun setParseProvider(value: String) {
@@ -106,6 +117,8 @@ class SettingsViewModel @Inject constructor(
     fun setParseApiKey(value: String) {
         settingsPrefs.parseApiKey = value
         parseApiKey.value = value
+        // 重新填写后「解不开」的状态随之解除，提示必须能实时消失
+        parseKeyUnreadable.value = settingsPrefs.parseKeyUnreadable
     }
 
     fun setParseModel(value: String) {
@@ -116,6 +129,9 @@ class SettingsViewModel @Inject constructor(
     // ---- 健康问答服务配置 ----
     val qaProvider = MutableStateFlow(settingsPrefs.qaProvider)
     val qaApiKey = MutableStateFlow(settingsPrefs.qaApiKey)
+
+    /** 同 [parseKeyUnreadable]，声明顺序同样须在 [qaApiKey] 之后 */
+    val qaKeyUnreadable = MutableStateFlow(settingsPrefs.qaKeyUnreadable)
     val qaModel = MutableStateFlow(settingsPrefs.qaModel)
 
     fun setQaProvider(value: String) {
@@ -131,6 +147,36 @@ class SettingsViewModel @Inject constructor(
     fun setQaApiKey(value: String) {
         settingsPrefs.qaApiKey = value
         qaApiKey.value = value
+        qaKeyUnreadable.value = settingsPrefs.qaKeyUnreadable
+    }
+
+    // ---- LLM 调用统计（可观测性）----
+
+    /** 统计窗口：近 30 天 */
+    private val STATS_WINDOW_MS = 30L * 24 * 60 * 60 * 1000
+
+    /** 最近明细条数 */
+    private val RECENT_LIMIT = 10
+
+    private val statsRefresh = MutableStateFlow(0)
+
+    /** 近 30 天的调用统计 */
+    val llmStats: StateFlow<LlmCallStats> = statsRefresh
+        .map { llmCallLogRepository.stats(STATS_WINDOW_MS) }
+        .stateIn(
+            viewModelScope,
+            SharingStarted.WhileSubscribed(5000),
+            LlmCallStats(0, 0, 0, 0, 0, emptyList())
+        )
+
+    /** 最近 10 次调用明细 */
+    val recentCalls: StateFlow<List<LlmCallRecord>> = statsRefresh
+        .map { llmCallLogRepository.recent(RECENT_LIMIT) }
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
+
+    /** 进入设置页或用户手动刷新时触发重新统计 */
+    fun refreshLlmStats() {
+        statsRefresh.value++
     }
 
     fun setQaModel(value: String) {

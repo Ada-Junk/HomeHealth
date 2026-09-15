@@ -3,13 +3,14 @@ package com.example.homehealth.data.remote
 import com.example.homehealth.data.local.entity.HealthRecord
 import com.example.homehealth.util.DateUtils
 import com.example.homehealth.util.HealthTypes
+import com.example.homehealth.util.SchemaNormalizer
 import javax.inject.Inject
 import javax.inject.Singleton
 import kotlin.math.abs
 
 /**
  * 本地问答引擎（离线回退方案）：
- * 基于成员健康记录的规则式问答，远程 RAG 服务不可用时使用。
+ * 基于成员健康记录的规则式问答，在未配置供应商、远程调用失败或本地模式下使用。
  */
 @Singleton
 class LocalQaEngine @Inject constructor() {
@@ -66,18 +67,76 @@ class LocalQaEngine @Inject constructor() {
         return sb.toString() to sources.distinct()
     }
 
-    /** 根据问题关键词匹配涉及的指标类型 */
+    /**
+     * 根据问题匹配涉及的指标类型。
+     *
+     * 覆盖全部 49 项指标，而不是原先硬编码的 6 个分支。三个来源：
+     * 1. 指标字典的中文名（`HealthTypes.DEFS.label`）；
+     * 2. `SchemaNormalizer.typeAliases` —— 别名表本就是为"报告里的各种写法"准备的，
+     *    口语提问同样适用，复用它可避免别名出现第二份副本；
+     * 3. [GROUP_KEYWORDS] —— 「血脂」「肝功能」这类成组说法，命中后展开为多项。
+     *
+     * 匹配规则：中文做去空格子串匹配；**纯拉丁别名按单词边界匹配**，
+     * 否则 `ua`、`cr`、`hb` 这类两字母缩写会命中无关文本。
+     */
     private fun detectTypes(question: String): List<String> {
-        val types = mutableSetOf<String>()
-        if (question.contains("血压")) types.add(HealthTypes.BLOOD_PRESSURE)
-        if (question.contains("血糖")) types.add(HealthTypes.BLOOD_GLUCOSE)
-        if (question.contains("胆固醇") || question.contains("血脂")) {
-            types.add(HealthTypes.TOTAL_CHOLESTEROL)
-            types.add(HealthTypes.TRIGLYCERIDES)
+        val raw = question.lowercase()
+        val tight = raw.replace(" ", "")
+        val types = linkedSetOf<String>()
+
+        GROUP_KEYWORDS.forEach { (keyword, targets) ->
+            if (tight.contains(keyword)) types.addAll(targets)
         }
-        if (question.contains("甘油三酯")) types.add(HealthTypes.TRIGLYCERIDES)
-        if (question.contains("体重") || question.contains("胖") || question.contains("瘦")) types.add(HealthTypes.WEIGHT)
-        if (question.contains("心率") || question.contains("脉搏")) types.add(HealthTypes.HEART_RATE)
+        HealthTypes.DEFS.forEach { def ->
+            val label = def.label.lowercase().replace(" ", "")
+            if (label.isNotEmpty() && tight.contains(label)) types.add(def.type)
+        }
+        aliasMatchers.forEach { m ->
+            val hit = m.wordRegex?.containsMatchIn(raw) ?: tight.contains(m.tight)
+            if (hit) types.add(m.type)
+        }
         return types.toList()
+    }
+
+    private class AliasMatcher(val type: String, val tight: String, val wordRegex: Regex?)
+
+    /** 别名匹配器，首次使用时构建一次（106 条别名，不必每次提问都编译正则） */
+    private val aliasMatchers: List<AliasMatcher> by lazy {
+        SchemaNormalizer.typeAliases.map { (alias, type) ->
+            val a = alias.lowercase()
+            val isLatin = a.all { it.code < 128 }
+            AliasMatcher(
+                type = type,
+                tight = a.replace(" ", ""),
+                wordRegex = if (isLatin) Regex("\\b" + Regex.escape(a) + "\\b") else null
+            )
+        }
+    }
+
+    private companion object {
+        /**
+         * 口语化的成组说法：这些词不是任何单一指标的别名，命中后应展开为多项。
+         * 保留原实现里「血脂」「胖/瘦」等口语习惯，同时补齐常见体检套餐的分组。
+         */
+        val GROUP_KEYWORDS: Map<String, List<String>> = mapOf(
+            "血脂" to listOf(
+                HealthTypes.TOTAL_CHOLESTEROL, HealthTypes.TRIGLYCERIDES,
+                HealthTypes.HDL, HealthTypes.LDL
+            ),
+            "胆固醇" to listOf(
+                HealthTypes.TOTAL_CHOLESTEROL, HealthTypes.HDL, HealthTypes.LDL
+            ),
+            "血常规" to listOf("wbc", "rbc", "hemoglobin", "hematocrit", "platelets"),
+            "肝功能" to listOf("alt", "ast", "ggt", "total_bilirubin", "albumin"),
+            "肾功能" to listOf("creatinine", "urea_nitrogen", "uric_acid"),
+            "甲状腺" to listOf("tsh", "ft3", "ft4"),
+            "电解质" to listOf("potassium", "sodium", "chloride", "calcium"),
+            "维生素" to listOf(
+                "vitamin_a", "vitamin_b1", "vitamin_b6", "vitamin_b12",
+                "vitamin_c", "vitamin_d", "vitamin_e", "folate"
+            ),
+            "胖" to listOf(HealthTypes.WEIGHT, "bmi", "body_fat"),
+            "瘦" to listOf(HealthTypes.WEIGHT, "bmi")
+        )
     }
 }

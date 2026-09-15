@@ -12,9 +12,12 @@
     <uses-permission android:name="android.permission.READ_CALENDAR" />
     <uses-permission android:name="android.permission.WRITE_CALENDAR" />
 
+    <!-- allowBackup="false"：「本地优先、隐私至上」的前提条件。
+         置 true 时，Room 健康数据（homehealth.db）与 SharedPreferences 中的
+         API Key 都会进入 adb backup / 云备份通道，可被完整导出。 -->
     <application
         android:name=".HomeHealthApp"
-        android:allowBackup="true"
+        android:allowBackup="false"
         android:icon="@mipmap/ic_launcher"
         android:label="@string/app_name"
         android:roundIcon="@mipmap/ic_launcher_round"

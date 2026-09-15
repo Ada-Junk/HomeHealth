@@ -99,9 +99,14 @@ class DocumentUploadViewModel @Inject constructor(
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
     init {
-        // 恢复僵尸状态：上次崩溃/退出时卡在 PROCESSING 的文档重置为 FAILED（可重试）
+        // 恢复僵尸状态：上次崩溃/退出时卡在 PROCESSING 的文档重置为 FAILED（可重试）。
+        // 仓库内部做了限频，并跳过正在解析中的文档，因此重复进入本页是安全的。
         viewModelScope.launch {
             runCatching { documentRepository.resetStuckProcessing() }
+        }
+        // 清理拍照中途取消留下的 0 字节图片文件
+        viewModelScope.launch {
+            runCatching { documentRepository.cleanupEmptyImages() }
         }
         // 文档列表同步进 uiState（供界面渲染历史）
         viewModelScope.launch {
@@ -148,6 +153,9 @@ class DocumentUploadViewModel @Inject constructor(
             }
             try {
                 val document = documentRepository.saveImageAndCreateDocument(uri, memberId)
+                // 复制已完成：立刻清理来源文件（拍照路径下它是一份临时文件），避免同一张报告占两份空间。
+                // 放在这里而不是 finally —— 进程若在解析途中被杀，finally 不保证执行，会留下孤儿文件。
+                cleanupSource(uri)
                 internal.update {
                     it.copy(
                         currentDocument = document,
@@ -158,6 +166,7 @@ class DocumentUploadViewModel @Inject constructor(
                 }
                 parseInternal(document)
             } catch (e: Exception) {
+                cleanupSource(uri)
                 internal.update {
                     it.copy(
                         phase = UploadPhase.ERROR,
@@ -166,6 +175,12 @@ class DocumentUploadViewModel @Inject constructor(
                 }
             }
         }
+    }
+
+    /** 拍照/选图完成后清理来源文件（仅当来源位于本应用私有 documents/ 目录内时才会真的删除） */
+    private suspend fun cleanupSource(uri: Uri) {
+        runCatching { documentRepository.deleteSourceImageIfOwned(uri) }
+        pendingCameraUri = null
     }
 
     /** 重试解析失败的文档 */
@@ -265,15 +280,21 @@ class DocumentUploadViewModel @Inject constructor(
         viewModelScope.launch {
             internal.update { it.copy(phase = UploadPhase.CONFIRMING) }
             val records = editable.map { e ->
+                // 血压形如 "120/80"，取收缩压作为主数值；
+                // 其余（含区间型 "<0.1" / ">100"）统一用比较符解析，符号从当前文本重新推导
+                // —— 用户在确认页可能已改动数值，不能沿用归一化时的旧结论。
+                val primary = e.value.split("/").firstOrNull()?.trim().orEmpty()
+                val (comparator, numeric) = SchemaNormalizer.parseComparator(primary)
                 HealthRecord(
                     id = UUID.randomUUID().toString(),
                     memberId = memberId,
                     type = e.type,
                     value = e.value.trim(),
-                    numericValue = e.value.split("/").firstOrNull()?.trim()?.toDoubleOrNull(),
+                    numericValue = numeric,
                     unit = e.unit.trim().ifBlank { HealthTypes.unit(e.type) },
                     recordDate = DateUtils.parseDate(e.date) ?: System.currentTimeMillis(),
-                    sourceDocumentId = document.id
+                    sourceDocumentId = document.id,
+                    comparator = comparator
                 )
             }
             documentRepository.confirmRecords(document, records)

@@ -5,6 +5,11 @@ plugins {
     id("org.jetbrains.kotlin.plugin.compose")
 }
 
+// Room schema 导出目录：供迁移测试与增量迁移生成使用
+ksp {
+    arg("room.schemaLocation", "$projectDir/schemas")
+}
+
 android {
     namespace = "com.example.homehealth"
     compileSdk = 37
@@ -36,6 +41,16 @@ android {
     }
     buildFeatures {
         compose = true
+    }
+    sourceSets {
+        // 把导出的 Room schema 作为 androidTest 的 assets，MigrationTestHelper 需要它来校验迁移结果
+        // 用 directories 而非已废弃的 srcDir。
+        //
+        // ⚠️ 陷阱：mergeDebugAndroidTestAssets 并不依赖 ksp 的 schema 生成任务，
+        // 所以**刚升 DB 版本后的第一次构建，新版本的 <N>.json 可能来不及被打进 assets**，
+        // 此时迁移测试会在运行时因找不到 schema 而失败。再构建一次即可。
+        // （schemas/ 已入库，因此这个现象只影响本地"改完版本号后的首次构建"。）
+        getByName("androidTest").assets.directories.add("schemas")
     }
     packaging {
         resources {
@@ -92,6 +107,7 @@ dependencies {
     testImplementation("junit:junit:4.13.2")
     androidTestImplementation("androidx.test.ext:junit:1.1.5")
     androidTestImplementation("androidx.test.espresso:espresso-core:3.5.1")
+    androidTestImplementation("androidx.room:room-testing:2.8.5")
     androidTestImplementation(platform("androidx.compose:compose-bom:2024.02.01"))
     androidTestImplementation("androidx.compose.ui:ui-test-junit4")
     debugImplementation("androidx.compose.ui:ui-test-manifest")

@@ -72,6 +72,18 @@
     <string name="record_measure_date">测量日期：%1$s</string>
     <string name="record_notes_label">备注（可空）</string>
     <string name="record_invalid_value">请输入有效数值</string>
+    <string name="record_value_suspicious">该数值与参考范围（%1$s）相差数倍，可能是录入笔误。确认无误请再点一次保存</string>
+    <string name="alert_title_metric_high">%1$s 偏高</string>
+    <string name="alert_title_metric_low">%1$s 偏低</string>
+    <string name="alert_title_trend_rising">%1$s 呈持续上升趋势</string>
+    <string name="alert_title_trend_falling">%1$s 呈持续下降趋势</string>
+    <string name="alert_title_baseline_up">%1$s 较个人基线明显升高</string>
+    <string name="alert_title_baseline_down">%1$s 较个人基线明显降低</string>
+    <string name="alert_desc_metric_high">%1$s %2$s %3$s（%4$s）超出参考范围（%5$s），建议关注并复查</string>
+    <string name="alert_desc_metric_high_severe">%1$s %2$s %3$s（%4$s）超出参考范围（%5$s），明显偏高，建议尽快就医复查</string>
+    <string name="alert_desc_metric_low">%1$s %2$s %3$s（%4$s）低于参考范围（%5$s），建议复查，如伴有不适请就医</string>
+    <string name="alert_desc_trend">%1$s %2$s %3$s（%4$s），请关注变化趋势</string>
+    <string name="alert_desc_baseline">%1$s 当前 %2$s %3$s，较个人历史中位值 %4$s %3$s 有明显变化。这是相对自身历史的变化，请结合参考范围一并判断</string>
 
     <!-- 指标详情页 -->
     <string name="record_detail_trend">历史趋势</string>
@@ -230,6 +242,17 @@
     <string name="settings_vision_model_label">视觉模型（用于报告解析）</string>
     <string name="settings_text_model_label">文本模型（用于健康问答）</string>
     <string name="settings_model_default">默认（%1$s）</string>
+    <string name="settings_model_custom_hint">可直接填写该供应商的其他模型名；预设清单可能滞后于官方更新</string>
+    <string name="settings_model_presets">预设模型（点击填入）</string>
+    <string name="settings_key_unreadable">已保存的 API Key 无法解密（系统密钥库已失效），请重新填写</string>
+    <string name="settings_llm_stats_section">LLM 调用统计</string>
+    <string name="settings_llm_stats_window">近 30 天</string>
+    <string name="settings_llm_calls">调用</string>
+    <string name="settings_llm_failures">失败</string>
+    <string name="settings_llm_avg_latency">平均耗时</string>
+    <string name="settings_llm_latency_ms">%1$d ms</string>
+    <string name="settings_llm_chars">提示词 %1$d 字符 · 回复 %2$d 字符</string>
+    <string name="settings_llm_provider_line">%1$s：%2$d 次（失败 %3$d）</string>
     <string name="settings_key_show">显示</string>
     <string name="settings_key_hide">隐藏</string>
 

@@ -18,8 +18,36 @@ object SchemaNormalizer {
         val value: String,         // 数值文本（换算后）
         val numericValue: Double?, // 主数值（换算后）
         val unit: String,          // 标准单位（无标准单位时保留归一化写法）
-        val note: String?          // 换算说明（如「nmol/L 已换算为 ng/mL」），未换算为 null
+        val note: String?,         // 换算说明（如「nmol/L 已换算为 ng/mL」），未换算为 null
+        /** 比较符：null 精确值 / LT「小于」/ GT「大于」 */
+        val comparator: String? = null
     )
+
+    /** 报告写作 `<0.1` 这类区间型结果 */
+    const val COMPARATOR_LT = "LT"
+
+    /** 报告写作 `>100` 这类区间型结果 */
+    const val COMPARATOR_GT = "GT"
+
+    /**
+     * 拆出比较符与数值，支持 `< > ≤ ≥` 及全角/数学写法 `＜ ＞ ≦ ≧`。
+     *
+     * 体检报告里区间型结果很常见（高敏 CRP `<0.1`、抗体 `>100`）。
+     * 不解析比较符的话它们会因 numericValue 为空而被趋势与预警整体跳过。
+     *
+     * @return `(comparator, numericValue)`；无比较符时 comparator 为 null
+     */
+    fun parseComparator(raw: String): Pair<String?, Double?> {
+        val text = raw.trim()
+        if (text.isEmpty()) return null to null
+        val comparator = when (text.first()) {
+            '<', '≤', '＜', '≦' -> COMPARATOR_LT
+            '>', '≥', '＞', '≧' -> COMPARATOR_GT
+            else -> null
+        }
+        val body = if (comparator == null) text else text.drop(1).trim()
+        return comparator to body.toDoubleOrNull()
+    }
 
     // ---------- 1. 指标别名 → 标准类型（英文键统一小写） ----------
 
@@ -141,6 +169,12 @@ object SchemaNormalizer {
         put("钙", "calcium")
     }
 
+    /**
+     * 全部别名 → 标准类型（只读）。
+     * 供关键词匹配等场景复用，避免别名表出现第二份副本 —— 两份必然随时间漂移。
+     */
+    val typeAliases: Map<String, String> get() = TYPE_ALIASES
+
     /** 指标名 → 标准类型（先精确匹配，再小写匹配） */
     fun normalizeType(type: String): String {
         val t = type.trim()
@@ -229,14 +263,27 @@ object SchemaNormalizer {
         val stdUnit = HealthTypes.unit(stdType)      // 标准单位（未知类型为空串）
         val canonUnit = normalizeUnit(unit)
 
+        // 区间型结果（"<0.1" / ">100"）：拆出比较符；符号会保留在展示文本里
+        val (comparator, parsedFromText) = parseComparator(value)
+        val source = numericValue ?: parsedFromText
+        fun render(number: Double): String {
+            val body = formatDouble(number)
+            return when (comparator) {
+                COMPARATOR_LT -> "<$body"
+                COMPARATOR_GT -> ">$body"
+                else -> body
+            }
+        }
+
         // 无标准单位、单位一致、或单位为空：只做指标名与写法归一
         if (stdUnit.isBlank() || canonUnit.isBlank() || canonUnit == stdUnit) {
             return Result(
                 type = stdType,
                 value = value,
-                numericValue = numericValue,
+                numericValue = source,
                 unit = canonUnit.ifBlank { stdUnit },
-                note = null
+                note = null,
+                comparator = comparator
             )
         }
 
@@ -244,18 +291,19 @@ object SchemaNormalizer {
         val factor = UNIT_FACTORS[stdType]?.get(canonUnit)
         if (factor == null) {
             // 单位不同但无可靠换算系数（如血压 mmHg 以外的情况）——保留原单位与原值
-            return Result(stdType, value, numericValue, canonUnit, null)
+            return Result(stdType, value, source, canonUnit, null, comparator)
         }
 
-        val source = numericValue ?: value.trim().toDoubleOrNull()
-            ?: return Result(stdType, value, numericValue, canonUnit, null)
-        val converted = round2(source * factor)
+        val numeric = source
+            ?: return Result(stdType, value, source, canonUnit, null, comparator)
+        val converted = round2(numeric * factor)
         return Result(
             type = stdType,
-            value = formatDouble(converted),
+            value = render(converted),
             numericValue = converted,
             unit = stdUnit,
-            note = "$canonUnit 已换算为 $stdUnit"
+            note = "$canonUnit 已换算为 $stdUnit",
+            comparator = comparator
         )
     }
 

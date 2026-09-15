@@ -9,3 +9,10 @@ captures/
 .cxx/
 *.apk
 *.aab
+
+# AI 助手工作目录（会话记忆 / 中间产物，不入库）
+.workbuddy/
+.workbuddy-ai/
+
+# Gradle 本地守护进程 JVM 配置（因机器而异）
+gradle/gradle-daemon-jvm.properties

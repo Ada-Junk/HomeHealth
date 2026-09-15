@@ -4,10 +4,12 @@ import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.homehealth.data.local.entity.HealthRecord
+import com.example.homehealth.domain.repository.FamilyRepository
 import com.example.homehealth.domain.repository.HealthRecordRepository
 import com.example.homehealth.domain.usecase.DetectAnomaliesUseCase
 import com.example.homehealth.util.DateUtils
 import com.example.homehealth.util.HealthTypes
+import com.example.homehealth.util.SchemaNormalizer
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
@@ -30,11 +32,17 @@ data class RecordDetailUiState(
 class RecordDetailViewModel @Inject constructor(
     savedStateHandle: SavedStateHandle,
     private val healthRecordRepository: HealthRecordRepository,
+    private val familyRepository: FamilyRepository,
     private val detectAnomalies: DetectAnomaliesUseCase
 ) : ViewModel() {
 
     val memberId: String = checkNotNull(savedStateHandle["memberId"])
     val type: String = checkNotNull(savedStateHandle["type"])
+
+    /** 成员性别：参考范围展示需按性别取（血红蛋白 / 肌酐 / 尿酸等男女区间不同） */
+    val memberGender: StateFlow<String?> = familyRepository.observeMembers()
+        .map { members -> members.firstOrNull { it.id == memberId }?.gender }
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), null)
 
     val uiState: StateFlow<RecordDetailUiState> = healthRecordRepository
         .observeRecordsByType(memberId, type)
@@ -58,7 +66,10 @@ class RecordDetailViewModel @Inject constructor(
     fun addRecord(primary: String, secondary: String?, dateText: String, notes: String?) {
         val value = if (secondary.isNullOrBlank()) primary.trim()
         else "${primary.trim()}/${secondary.trim()}"
-        val numeric = value.split("/").firstOrNull()?.trim()?.toDoubleOrNull()
+        // 支持手动输入区间型结果（"<0.1" / ">100"）
+        val (comparator, numeric) = SchemaNormalizer.parseComparator(
+            value.split("/").firstOrNull()?.trim().orEmpty()
+        )
         val date = DateUtils.parseDate(dateText) ?: System.currentTimeMillis()
         viewModelScope.launch {
             healthRecordRepository.addRecord(
@@ -71,7 +82,8 @@ class RecordDetailViewModel @Inject constructor(
                     unit = HealthTypes.unit(type),
                     recordDate = date,
                     sourceDocumentId = null,
-                    notes = notes?.trim()?.ifBlank { null }
+                    notes = notes?.trim()?.ifBlank { null },
+                    comparator = comparator
                 )
             )
             detectAnomalies(memberId)
@@ -95,7 +107,9 @@ class RecordDetailViewModel @Inject constructor(
     ) {
         val value = if (secondary.isNullOrBlank()) primary.trim()
         else "${primary.trim()}/${secondary.trim()}"
-        val numeric = value.split("/").firstOrNull()?.trim()?.toDoubleOrNull()
+        val (comparator, numeric) = SchemaNormalizer.parseComparator(
+            value.split("/").firstOrNull()?.trim().orEmpty()
+        )
         val date = DateUtils.parseDate(dateText) ?: record.recordDate
         viewModelScope.launch {
             healthRecordRepository.updateRecord(
@@ -104,7 +118,8 @@ class RecordDetailViewModel @Inject constructor(
                     numericValue = numeric,
                     unit = record.unit.ifBlank { HealthTypes.unit(record.type) },
                     recordDate = date,
-                    notes = notes?.trim()?.ifBlank { null }
+                    notes = notes?.trim()?.ifBlank { null },
+                    comparator = comparator
                 )
             )
             detectAnomalies(memberId)

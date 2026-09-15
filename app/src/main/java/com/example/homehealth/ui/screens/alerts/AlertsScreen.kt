@@ -47,6 +47,7 @@ import androidx.navigation.NavHostController
 import com.example.homehealth.R
 import com.example.homehealth.data.local.dao.AlertWithMemberName
 import com.example.homehealth.ui.components.SeverityBadge
+import com.example.homehealth.util.AlertText
 import com.example.homehealth.util.DateUtils
 import kotlinx.coroutines.launch
 
@@ -151,7 +152,7 @@ fun AlertsScreen(
         AlertDialog(
             onDismissRequest = { deleteTarget = null },
             title = { Text(stringResource(R.string.alerts_delete_title)) },
-            text = { Text(stringResource(R.string.alerts_delete_confirm, item.alert.title)) },
+            text = { Text(stringResource(R.string.alerts_delete_confirm, AlertText.title(context, item.alert))) },
             confirmButton = {
                 TextButton(onClick = {
                     viewModel.deleteAlert(item.alert.id)
@@ -178,10 +179,12 @@ private fun AlertCard(
             .combinedClickable(onClick = onClick, onLongClick = onLongPress)
     ) {
         Column(modifier = Modifier.padding(14.dp)) {
+            val context = LocalContext.current
             Row(verticalAlignment = Alignment.CenterVertically) {
                 SeverityBadge(severity = item.alert.severity)
                 Text(
-                    text = item.alert.title,
+                    // 告警正文按当前语言渲染；结构化字段缺失的老数据回退到落库文本
+                    text = AlertText.title(context, item.alert),
                     style = MaterialTheme.typography.titleMedium,
                     modifier = Modifier
                         .weight(1f)
@@ -192,7 +195,7 @@ private fun AlertCard(
                 }
             }
             Text(
-                text = item.alert.description,
+                text = AlertText.description(context, item.alert),
                 style = MaterialTheme.typography.bodyMedium,
                 modifier = Modifier.padding(top = 6.dp)
             )

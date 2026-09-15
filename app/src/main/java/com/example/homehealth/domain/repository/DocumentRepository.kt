@@ -15,6 +15,12 @@ interface DocumentRepository {
     /** 将图片复制到应用私有目录并创建 PROCESSING 状态的文档记录 */
     suspend fun saveImageAndCreateDocument(uri: Uri, memberId: String): MedicalDocument
 
+    /** 删除已复制完成的来源图片文件（仅限应用私有目录内的拍照临时文件），避免同一次拍照占两份空间 */
+    suspend fun deleteSourceImageIfOwned(uri: Uri)
+
+    /** 清理拍照中途取消留下的 0 字节图片文件 */
+    suspend fun cleanupEmptyImages()
+
     /** 解析文档（调用远程 OCR/LLM 服务，未启用或失败时抛出异常） */
     suspend fun parseDocument(document: MedicalDocument, documentType: String? = null): ParseResult
 

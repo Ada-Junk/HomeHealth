@@ -72,6 +72,18 @@
     <string name="record_measure_date">Date: %1$s</string>
     <string name="record_notes_label">Notes (optional)</string>
     <string name="record_invalid_value">Enter a valid value</string>
+    <string name="record_value_suspicious">This value is several times off the reference range (%1$s) and may be a typo. Tap Save again to confirm</string>
+    <string name="alert_title_metric_high">%1$s is high</string>
+    <string name="alert_title_metric_low">%1$s is low</string>
+    <string name="alert_title_trend_rising">%1$s shows a rising trend</string>
+    <string name="alert_title_trend_falling">%1$s shows a falling trend</string>
+    <string name="alert_title_baseline_up">%1$s is notably above personal baseline</string>
+    <string name="alert_title_baseline_down">%1$s is notably below personal baseline</string>
+    <string name="alert_desc_metric_high">%1$s %2$s %3$s (%4$s) is above the reference range (%5$s). Please monitor and follow up</string>
+    <string name="alert_desc_metric_high_severe">%1$s %2$s %3$s (%4$s) is far above the reference range (%5$s). Please see a doctor soon</string>
+    <string name="alert_desc_metric_low">%1$s %2$s %3$s (%4$s) is below the reference range (%5$s). Please follow up, and seek care if you feel unwell</string>
+    <string name="alert_desc_trend">%1$s %2$s %3$s (%4$s). Please watch the trend</string>
+    <string name="alert_desc_baseline">%1$s is now %2$s %3$s, notably changed from the personal baseline of %4$s %3$s. This reflects a change from your own history — please consider it together with the reference range</string>
 
     <!-- Record detail -->
     <string name="record_detail_trend">Trend</string>
@@ -230,6 +242,17 @@
     <string name="settings_vision_model_label">Vision model (for parsing)</string>
     <string name="settings_text_model_label">Text model (for Q&amp;A)</string>
     <string name="settings_model_default">Default (%1$s)</string>
+    <string name="settings_model_custom_hint">Any model name from this provider can be typed in; the preset list may lag behind vendor updates</string>
+    <string name="settings_model_presets">Preset models (tap to fill)</string>
+    <string name="settings_key_unreadable">The saved API key cannot be decrypted (system keystore unavailable). Please re-enter it.</string>
+    <string name="settings_llm_stats_section">LLM call statistics</string>
+    <string name="settings_llm_stats_window">Last 30 days</string>
+    <string name="settings_llm_calls">Calls</string>
+    <string name="settings_llm_failures">Failures</string>
+    <string name="settings_llm_avg_latency">Avg latency</string>
+    <string name="settings_llm_latency_ms">%1$d ms</string>
+    <string name="settings_llm_chars">Prompt %1$d chars · completion %2$d chars</string>
+    <string name="settings_llm_provider_line">%1$s: %2$d calls (%3$d failed)</string>
     <string name="settings_key_show">Show</string>
     <string name="settings_key_hide">Hide</string>
 
