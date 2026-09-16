@@ -43,9 +43,9 @@ class AppDatabaseMigrationTest {
         FrameworkSQLiteOpenHelperFactory()
     )
 
-    /** 完整迁移链 v4 → v7（这是 schema 快照可追溯的最远起点） */
+    /** 完整迁移链 v4 → v8（这是 schema 快照可追溯的最远起点） */
     @Test
-    fun migrate4To7_keepsDataAndMatchesSchema() {
+    fun migrate4To8_keepsDataAndMatchesSchema() {
         // v4 建库并写入数据（只写各版本都存在的列，不依赖后续新增字段）
         helper.createDatabase(TEST_DB, 4).let { db ->
             insertSampleData(db)
@@ -54,11 +54,12 @@ class AppDatabaseMigrationTest {
 
         val db = helper.runMigrationsAndValidate(
             TEST_DB,
-            7,
+            8,
             true,
             DatabaseModule.MIGRATION_4_5,
             DatabaseModule.MIGRATION_5_6,
-            DatabaseModule.MIGRATION_6_7
+            DatabaseModule.MIGRATION_6_7,
+            DatabaseModule.MIGRATION_7_8
         )
 
         assertEquals(1, db.countOf("family_members"))
@@ -79,10 +80,30 @@ class AppDatabaseMigrationTest {
                 "type='index' AND name='index_health_records_memberId_type_recordDate'"
             )
         )
-        // v6/v7 新增的列必须真实存在
+        // v6/v7/v8 新增的列必须真实存在
         assertTrue(db.hasColumn("health_records", "comparator"))
         assertTrue(db.hasColumn("alerts", "metricType"))
         assertTrue(db.hasColumn("alerts", "baselineText"))
+        assertTrue(db.hasColumn("qa_history", "imagePath"))
+        db.close()
+    }
+
+    /** 单独验证最新一跳 v7 → v8（问答附图路径） */
+    @Test
+    fun migrate7To8_alone_isValid() {
+        helper.createDatabase(TEST_DB_78, 7).let { db ->
+            insertSampleData(db)
+            db.close()
+        }
+
+        val db = helper.runMigrationsAndValidate(
+            TEST_DB_78, 8, true, DatabaseModule.MIGRATION_7_8
+        )
+
+        assertTrue(db.hasColumn("qa_history", "imagePath"))
+        // 历史条目仍在，且新列默认为 NULL（纯文本提问）
+        assertEquals(1, db.countOf("qa_history"))
+        assertEquals(1, db.countOf("qa_history", "imagePath IS NULL"))
         db.close()
     }
 
@@ -155,5 +176,6 @@ class AppDatabaseMigrationTest {
     private companion object {
         const val TEST_DB = "migration-test.db"
         const val TEST_DB_67 = "migration-test-6-7.db"
+        const val TEST_DB_78 = "migration-test-7-8.db"
     }
 }

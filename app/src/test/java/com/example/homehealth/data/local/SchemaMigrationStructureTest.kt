@@ -11,7 +11,7 @@ import java.io.File
  *
  * 把「用 N.json 的 DDL 建库 → 施加迁移 → 与最新 DDL 逐表比对」从临时目录的 Python 脚本
  * 固化为仓库内测试：从 v4 的 schema 快照出发，把 [AppMigrationSql] 的 SQL 重放到
- * 一个纯内存的「表 → 列 → 亲和性」模型上，逐段与 Room 导出的 5/6/7.json 对照。
+ * 一个纯内存的「表 → 列 → 亲和性」模型上，逐段与 Room 导出的 5/6/7/8.json 对照。
  *
  * 与 androidTest 的 [AppDatabaseMigrationTest] 互补：那个验证真实 SQLite + Room 校验器
  * （含索引与 NOT NULL 级别），本测试不接设备也能在每次构建时拦截
@@ -132,6 +132,41 @@ class SchemaMigrationStructureTest {
     @Test
     fun `v7快照包含全部七张表`() {
         val tables = schemaOf(7).keys
+        assertEquals(
+            setOf(
+                "family_members", "health_records", "medical_documents",
+                "alerts", "medication_reminders", "qa_history", "llm_call_logs"
+            ),
+            tables
+        )
+    }
+
+    @Test
+    fun `v7到v8为qa_history新增imagePath列`() {
+        val after = applyAll(7, listOf(AppMigrationSql.V7_TO_V8))
+        assertEquals("TEXT", after.getValue("qa_history").getValue("imagePath"))
+        // 其余表不受影响：这一跳只加一列
+        assertEquals(schemaOf(7).getValue("health_records"), after.getValue("health_records"))
+        assertEquals(schemaOf(8), after)
+    }
+
+    @Test
+    fun `从v4连跑四段迁移-最终结构与8json一致`() {
+        val after = applyAll(
+            4,
+            listOf(
+                AppMigrationSql.V4_TO_V5,
+                AppMigrationSql.V5_TO_V6,
+                AppMigrationSql.V6_TO_V7,
+                AppMigrationSql.V7_TO_V8
+            )
+        )
+        assertEquals(schemaOf(8), after)
+    }
+
+    @Test
+    fun `v8快照包含全部七张表`() {
+        val tables = schemaOf(8).keys
         assertEquals(
             setOf(
                 "family_members", "health_records", "medical_documents",

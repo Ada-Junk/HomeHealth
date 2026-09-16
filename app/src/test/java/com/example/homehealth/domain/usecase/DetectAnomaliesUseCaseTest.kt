@@ -64,6 +64,7 @@ class DetectAnomaliesUseCaseTest {
         override suspend fun getRecentRecords(memberId: String, type: String, limit: Int): List<HealthRecord> =
             if (type == this.type) records.take(limit) else emptyList()
         override suspend fun getRecentByMember(memberId: String, limit: Int): List<HealthRecord> = emptyList()
+        override suspend fun getAllByMember(memberId: String): List<HealthRecord> = records
         override suspend fun getLatest(memberId: String, type: String): HealthRecord? = null
         override suspend fun addRecord(record: HealthRecord) {}
         override suspend fun addRecords(records: List<HealthRecord>) {}
