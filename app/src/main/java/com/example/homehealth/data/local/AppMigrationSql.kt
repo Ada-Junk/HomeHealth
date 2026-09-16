@@ -1,7 +1,7 @@
 package com.example.homehealth.data.local
 
 /**
- * v4 → v7 迁移 SQL 的单一事实来源。
+ * v4 → v8 迁移 SQL 的单一事实来源。
  *
  * **为什么要抽出来**：Migration 对象只能在设备 / instrumentation 环境里执行，
  * SQL 字符串埋在 `migrate()` 方法体内，JVM 单测拿不到——结构级校验过去只能靠
@@ -53,5 +53,16 @@ object AppMigrationSql {
         "ALTER TABLE alerts ADD COLUMN refText TEXT",
         "ALTER TABLE alerts ADD COLUMN spanText TEXT",
         "ALTER TABLE alerts ADD COLUMN baselineText TEXT"
+    )
+
+    /**
+     * v7 → v8：qa_history 新增附图路径列（保留已有数据）。
+     *
+     * 承载「随提问附带的报告图片」——影像 / 病理等叙述性报告无法结构化入库，
+     * 只能以图片提问；只有提问时带上图片，历史条目才不会出现「有提问看不到图」。
+     * 列可空，历史条目天然为 null（表示纯文本提问）。
+     */
+    val V7_TO_V8: List<String> = listOf(
+        "ALTER TABLE qa_history ADD COLUMN imagePath TEXT"
     )
 }

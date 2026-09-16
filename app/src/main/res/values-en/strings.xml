@@ -187,12 +187,19 @@
     <string name="qa_empty_members">Add a family member first</string>
     <string name="qa_try_ask">Try asking: "How is my blood pressure lately?"</string>
     <string name="qa_analyzing">Analyzing health records…</string>
+    <string name="qa_generating">Generating…</string>
+    <string name="qa_attach_cd">Attach image</string>
+    <string name="qa_remove_image_cd">Remove image</string>
+    <string name="qa_image_cd">Attached image</string>
+    <string name="qa_tools_show">Called %1$d tool(s), show steps</string>
+    <string name="qa_tools_hide">Called %1$d tool(s), hide steps</string>
     <string name="qa_input_hint">Type a health question…</string>
     <string name="qa_send_cd">Send</string>
     <string name="qa_sources">Sources:\n%1$s</string>
     <string name="qa_thinking_show">Show reasoning</string>
     <string name="qa_thinking_hide">Hide reasoning</string>
     <string name="vm_qa_failed">Failed to generate an answer: %1$s</string>
+    <string name="vm_qa_attach_failed">Could not read the image: %1$s</string>
     <string name="member_picker_pattern">%1$s (%2$s)</string>
 
     <!-- Settings -->

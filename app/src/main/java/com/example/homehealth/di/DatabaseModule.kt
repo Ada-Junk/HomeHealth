@@ -87,12 +87,29 @@ object DatabaseModule {
         }
     }
 
+    /**
+     * v7 → v8（保留已有数据）：`qa_history` 新增 `imagePath` 列 ——
+     * 支撑「随提问附带报告图片」。影像 / 病理这类叙述性报告没有对应的结构化指标，
+     * 只能以图片提问，历史条目需要记住图片在哪。
+     *
+     * ⚠️ 升版本后**必须构建两次**再装机：`mergeDebugAndroidTestAssets` 不依赖 ksp 的
+     * schema 生成任务，首次构建中新出现的 `8.json` 可能来不及进 androidTest assets——
+     * 编译会过，迁移测试运行时才失败。更要紧的是：**升版本当天不要装中途构建的半成品包**，
+     * 它会把 DB 版本烧到 8 但列不全，之后任何新包都无法再迁移。
+     */
+    val MIGRATION_7_8 = object : Migration(7, 8) {
+        override fun migrate(db: SupportSQLiteDatabase) {
+            AppMigrationSql.V7_TO_V8.forEach(db::execSQL)
+        }
+    }
+
     @Provides
     @Singleton
     fun provideDatabase(@ApplicationContext context: Context): AppDatabase =
         Room.databaseBuilder(context, AppDatabase::class.java, "homehealth.db")
             .addMigrations(
-                MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4, MIGRATION_4_5, MIGRATION_5_6, MIGRATION_6_7
+                MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4,
+                MIGRATION_4_5, MIGRATION_5_6, MIGRATION_6_7, MIGRATION_7_8
             )
             // 不使用 fallbackToDestructiveMigration()：版本跳变或缺失迁移时宁可直接启动失败，
             // 也不能静默清空用户数据（与下方"渐进式迁移保留数据"的定位一致）。

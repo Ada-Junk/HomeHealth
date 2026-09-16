@@ -1,5 +1,8 @@
 package com.example.homehealth.ui.screens.qa
 
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.PickVisualMediaRequest
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -23,6 +26,9 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.MenuBook
 import androidx.compose.material.icons.automirrored.filled.Send
+import androidx.compose.material.icons.filled.Build
+import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.Image
 import androidx.compose.material3.Card
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -42,17 +48,20 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.NavHostController
+import coil.compose.AsyncImage
 import com.example.homehealth.R
 import com.example.homehealth.data.local.entity.QAHistory
 import com.example.homehealth.ui.components.MarkdownText
 import com.example.homehealth.ui.components.memberPickerLabel
 import com.example.homehealth.util.DateUtils
+import java.io.File
 
 /** 健康问答页：聊天式界面，基于成员健康数据回答 */
 @OptIn(ExperimentalMaterial3Api::class)
@@ -66,11 +75,27 @@ fun QAScreen(
     val listState = rememberLazyListState()
     val keyboardController = LocalSoftwareKeyboardController.current
 
-    // 新消息（含待回答问题）时自动滚动到底部
-    LaunchedEffect(state.history.size, state.pendingQuestion) {
-        val last = state.history.size + (if (state.pendingQuestion != null) 1 else 0)
-        if (last > 0) {
-            listState.animateScrollToItem(last - 1)
+    // 附图：影像 / 病理这类叙述性报告没有对应的结构化指标，只能以图片提问
+    val pickImageLauncher = rememberLauncherForActivityResult(
+        ActivityResultContracts.PickVisualMedia()
+    ) { uri ->
+        uri?.let { viewModel.attachImage(it) }
+    }
+
+    // LazyColumn 实际条目数：历史对话 + 待回答问题气泡 + 回答气泡（加载中 / 流式中）
+    val bubbleCount = state.history.size +
+        (if (state.pendingQuestion != null) 1 else 0) +
+        (if (state.loading) 1 else 0)
+
+    // 新消息（含待回答问题）时自动滚动到底部；流式生成期间跟随正文增长。
+    // 生成中用 scrollToItem 而不是动画：每来一个 token 就打断上一次动画会让列表持续抖动。
+    LaunchedEffect(bubbleCount, state.streamingAnswer.length) {
+        if (bubbleCount <= 0) return@LaunchedEffect
+        val last = bubbleCount - 1
+        if (state.streamingAnswer.isEmpty()) {
+            listState.animateScrollToItem(last)
+        } else {
+            listState.scrollToItem(last)
         }
     }
 
@@ -140,33 +165,21 @@ fun QAScreen(
                     // 已发送待回答的问题：立即上屏，无需等待 LLM 返回
                     state.pendingQuestion?.let { q ->
                         item {
-                            PendingQuestionBubble(q)
+                            PendingQuestionBubble(q, state.streamingImagePath)
                         }
                     }
                     if (state.loading) {
                         item {
-                            Surface(
-                                shape = RoundedCornerShape(
-                                    topStart = 4.dp, topEnd = 16.dp,
-                                    bottomStart = 16.dp, bottomEnd = 16.dp
-                                ),
-                                color = MaterialTheme.colorScheme.surfaceVariant,
-                                modifier = Modifier.widthIn(max = 300.dp)
-                            ) {
-                                Row(
-                                    modifier = Modifier.padding(14.dp),
-                                    verticalAlignment = Alignment.CenterVertically,
-                                    horizontalArrangement = Arrangement.spacedBy(8.dp)
-                                ) {
-                                    CircularProgressIndicator(
-                                        modifier = Modifier.size(16.dp),
-                                        strokeWidth = 2.dp
-                                    )
-                                    Text(
-                                        stringResource(R.string.qa_analyzing),
-                                        style = MaterialTheme.typography.bodyMedium
-                                    )
-                                }
+                            // 依据先到（本地检索），所以通常一闪就进流式气泡；只有检索阶段才显示纯加载态
+                            if (state.hasStreaming) {
+                                StreamingAnswerBubble(
+                                    answer = state.streamingAnswer,
+                                    thinking = state.streamingThinking,
+                                    references = state.streamingReferences,
+                                    tools = state.streamingTools
+                                )
+                            } else {
+                                AnalyzingBubble()
                             }
                         }
                     }
@@ -182,6 +195,41 @@ fun QAScreen(
                 )
             }
 
+            // 待发送的附图：先给缩略图让用户确认，再连同问题一起发出
+            state.pendingImagePath?.let { path ->
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 12.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    AsyncImage(
+                        model = File(path),
+                        contentDescription = stringResource(R.string.qa_image_cd),
+                        contentScale = ContentScale.Crop,
+                        modifier = Modifier
+                            .size(56.dp)
+                            .clip(RoundedCornerShape(8.dp))
+                    )
+                    Text(
+                        stringResource(R.string.qa_image_cd),
+                        style = MaterialTheme.typography.labelMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        modifier = Modifier
+                            .weight(1f)
+                            .padding(horizontal = 10.dp)
+                    )
+                    IconButton(onClick = { viewModel.removeAttachment() }) {
+                        Icon(
+                            Icons.Filled.Close,
+                            contentDescription = stringResource(R.string.qa_remove_image_cd),
+                            tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                            modifier = Modifier.size(18.dp)
+                        )
+                    }
+                }
+            }
+
             // 输入栏（紧凑：48dp 高 + 14sp 文字；imePadding 使其始终位于输入法之上）
             Row(
                 modifier = Modifier
@@ -189,6 +237,21 @@ fun QAScreen(
                     .padding(horizontal = 12.dp, vertical = 6.dp),
                 verticalAlignment = Alignment.CenterVertically
             ) {
+                IconButton(
+                    onClick = {
+                        pickImageLauncher.launch(
+                            PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly)
+                        )
+                    },
+                    enabled = !state.loading
+                ) {
+                    Icon(
+                        Icons.Filled.Image,
+                        contentDescription = stringResource(R.string.qa_attach_cd),
+                        tint = MaterialTheme.colorScheme.primary,
+                        modifier = Modifier.size(22.dp)
+                    )
+                }
                 OutlinedTextField(
                     value = input,
                     onValueChange = { input = it },
@@ -210,7 +273,9 @@ fun QAScreen(
                             keyboardController?.hide()
                         }
                     },
-                    enabled = input.isNotBlank() && !state.loading && state.members.isNotEmpty()
+                    // 只发图不提问也是合法操作：图里往往就是要问的东西
+                    enabled = (input.isNotBlank() || state.pendingImagePath != null) &&
+                        !state.loading && state.members.isNotEmpty()
                 ) {
                     Icon(
                         Icons.AutoMirrored.Filled.Send,
@@ -224,9 +289,112 @@ fun QAScreen(
     }
 }
 
-/** 待回答的用户问题气泡（样式与历史问题气泡一致） */
+/** 纯加载态：只在检索尚未产出依据、或首个增量还没到达时短暂出现 */
 @Composable
-private fun PendingQuestionBubble(question: String) {
+private fun AnalyzingBubble() {
+    Surface(
+        shape = RoundedCornerShape(
+            topStart = 4.dp, topEnd = 16.dp,
+            bottomStart = 16.dp, bottomEnd = 16.dp
+        ),
+        color = MaterialTheme.colorScheme.surfaceVariant,
+        modifier = Modifier.widthIn(max = 300.dp)
+    ) {
+        Row(
+            modifier = Modifier.padding(14.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
+            CircularProgressIndicator(
+                modifier = Modifier.size(16.dp),
+                strokeWidth = 2.dp
+            )
+            Text(
+                stringResource(R.string.qa_analyzing),
+                style = MaterialTheme.typography.bodyMedium
+            )
+        }
+    }
+}
+
+/**
+ * 流式回答气泡：思考过程 → 正文逐字上屏 → 数据依据。
+ *
+ * 排版顺序与落库后的 [ChatBubble] 一致，回答结束时气泡被历史条目原地替换，视觉上不跳。
+ * 依据在正文之前就可见，是为了让用户在读到结论前先确认「它建立在哪些记录上」。
+ */
+@Composable
+private fun StreamingAnswerBubble(
+    answer: String,
+    thinking: String,
+    references: String,
+    tools: List<QaToolStep>
+) {
+    Surface(
+        shape = RoundedCornerShape(
+            topStart = 4.dp, topEnd = 16.dp,
+            bottomStart = 16.dp, bottomEnd = 16.dp
+        ),
+        color = MaterialTheme.colorScheme.surfaceVariant,
+        modifier = Modifier.widthIn(max = 320.dp)
+    ) {
+        Column(modifier = Modifier.padding(12.dp)) {
+            // 工具轨迹放在最前：它解释了"这个回答是怎么查出来的"
+            if (tools.isNotEmpty()) {
+                ToolTraceBlock(steps = tools)
+            }
+            if (thinking.isNotBlank()) {
+                ThinkingBlock(thinking = thinking)
+            }
+            if (answer.isNotBlank()) {
+                // 半截 Markdown（未闭合的 ** 或列表）按字面渲染，闭合后才成形，不会闪出错版式
+                MarkdownText(markdown = answer)
+            } else {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    CircularProgressIndicator(
+                        modifier = Modifier.size(14.dp),
+                        strokeWidth = 2.dp
+                    )
+                    Text(
+                        stringResource(R.string.qa_analyzing),
+                        style = MaterialTheme.typography.bodyMedium
+                    )
+                }
+            }
+            if (references.isNotBlank()) {
+                Text(
+                    // 依据文本自带前置空行（拼进最终答案时用来分段），气泡里单独成块则去掉
+                    text = references.trimStart('\n'),
+                    style = MaterialTheme.typography.labelMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.padding(top = 8.dp)
+                )
+            }
+            Row(
+                modifier = Modifier.padding(top = 6.dp),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(6.dp)
+            ) {
+                CircularProgressIndicator(
+                    modifier = Modifier.size(10.dp),
+                    strokeWidth = 1.5.dp
+                )
+                Text(
+                    stringResource(R.string.qa_generating),
+                    style = MaterialTheme.typography.labelMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
+        }
+    }
+}
+
+/** 待回答的用户问题气泡（样式与历史问题气泡一致）；可只带图不提问 */
+@Composable
+private fun PendingQuestionBubble(question: String, imagePath: String?) {
     Surface(
         shape = RoundedCornerShape(
             topStart = 16.dp, topEnd = 4.dp,
@@ -235,13 +403,34 @@ private fun PendingQuestionBubble(question: String) {
         color = MaterialTheme.colorScheme.primaryContainer,
         modifier = Modifier.widthIn(max = 300.dp)
     ) {
-        Text(
-            text = question,
-            style = MaterialTheme.typography.bodyMedium,
-            color = MaterialTheme.colorScheme.onPrimaryContainer,
-            modifier = Modifier.padding(12.dp)
-        )
+        Column(modifier = Modifier.padding(12.dp)) {
+            if (!imagePath.isNullOrBlank()) {
+                AttachedImage(path = imagePath)
+                if (question.isNotBlank()) Spacer8()
+            }
+            if (question.isNotBlank()) {
+                Text(
+                    text = question,
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onPrimaryContainer
+                )
+            }
+        }
     }
+}
+
+/** 气泡内的附图缩略图 */
+@Composable
+private fun AttachedImage(path: String) {
+    AsyncImage(
+        model = File(path),
+        contentDescription = stringResource(R.string.qa_image_cd),
+        contentScale = ContentScale.Crop,
+        modifier = Modifier
+            .fillMaxWidth()
+            .height(140.dp)
+            .clip(RoundedCornerShape(8.dp))
+    )
 }
 
 @Composable
@@ -250,7 +439,7 @@ private fun ChatBubble(item: QAHistory) {
         modifier = Modifier.fillMaxWidth(),
         horizontalAlignment = Alignment.End
     ) {
-        // 用户问题
+        // 用户问题（可带附图，也可只发图）
         Surface(
             shape = RoundedCornerShape(
                 topStart = 16.dp, topEnd = 4.dp,
@@ -259,12 +448,19 @@ private fun ChatBubble(item: QAHistory) {
             color = MaterialTheme.colorScheme.primaryContainer,
             modifier = Modifier.widthIn(max = 300.dp)
         ) {
-            Text(
-                text = item.question,
-                style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onPrimaryContainer,
-                modifier = Modifier.padding(12.dp)
-            )
+            Column(modifier = Modifier.padding(12.dp)) {
+                if (!item.imagePath.isNullOrBlank()) {
+                    AttachedImage(path = item.imagePath!!)
+                    if (item.question.isNotBlank()) Spacer8()
+                }
+                if (item.question.isNotBlank()) {
+                    Text(
+                        text = item.question,
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onPrimaryContainer
+                    )
+                }
+            }
         }
 
         Spacer8()
@@ -301,6 +497,70 @@ private fun ChatBubble(item: QAHistory) {
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     modifier = Modifier.padding(top = 4.dp)
                 )
+            }
+        }
+    }
+}
+
+/**
+ * 工具调用轨迹：默认收起，展开后是「工具名 → 参数 / 返回摘要」的列表。
+ *
+ * 让用户看到回答**是怎么查出来的**，而不只是看到结论 —— 这与展示思考过程是同一个动机：
+ * 健康问答的可信度来自可核对，而不是来自模型说得笃定。
+ */
+@Composable
+private fun ToolTraceBlock(steps: List<QaToolStep>) {
+    var expanded by remember { mutableStateOf(false) }
+    Column(modifier = Modifier.padding(bottom = 8.dp)) {
+        Row(
+            modifier = Modifier
+                .clip(RoundedCornerShape(8.dp))
+                .clickable { expanded = !expanded }
+                .padding(vertical = 4.dp, horizontal = 6.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Icon(
+                Icons.Filled.Build,
+                contentDescription = null,
+                tint = MaterialTheme.colorScheme.primary,
+                modifier = Modifier.size(14.dp)
+            )
+            Text(
+                text = stringResource(
+                    if (expanded) R.string.qa_tools_hide else R.string.qa_tools_show,
+                    steps.size
+                ),
+                style = MaterialTheme.typography.labelMedium,
+                color = MaterialTheme.colorScheme.primary,
+                modifier = Modifier.padding(start = 6.dp)
+            )
+        }
+        androidx.compose.animation.AnimatedVisibility(visible = expanded) {
+            Column(
+                modifier = Modifier
+                    .padding(top = 4.dp)
+                    .clip(RoundedCornerShape(8.dp))
+                    .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f))
+                    .padding(8.dp)
+            ) {
+                steps.forEach { step ->
+                    Text(
+                        // 尾部的省略号表示"还在执行中"，避免用户以为卡住了
+                        text = if (step.done) step.name else "${step.name} …",
+                        style = MaterialTheme.typography.labelMedium,
+                        color = if (step.ok) {
+                            MaterialTheme.colorScheme.primary
+                        } else {
+                            MaterialTheme.colorScheme.error
+                        }
+                    )
+                    Text(
+                        text = step.detail,
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        modifier = Modifier.padding(start = 10.dp, bottom = 6.dp)
+                    )
+                }
             }
         }
     }

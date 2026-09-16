@@ -22,13 +22,13 @@
 
 **English**
 
-HomeHealth is a local-first, privacy-focused family health manager for Android. Snap a photo of a lab report or health checkup sheet, and a **Vision LLM** extracts 49 types of structured health metrics in JSON mode — complete blood count, glucose, lipids, liver & kidney function, vitamins and more. A **Schema Normalization** layer then maps 106 metric aliases to a standard dictionary, unifies 24 unit spellings, and applies 24 clinically reliable unit conversions before anything reaches the database. Every family member gets an independent health profile with three-rule anomaly detection (reference ranges / trend windows / personal baseline), record-grounded Q&A, and medication reminders synced with the system calendar. Every LLM call is logged locally (latency / retries / failure type — never the prompt content). The UI is fully bilingual (English / 中文).
+HomeHealth is a local-first, privacy-focused family health manager for Android. Snap a photo of a lab report or health checkup sheet, and a **Vision LLM** extracts 49 types of structured health metrics in JSON mode — complete blood count, glucose, lipids, liver & kidney function, vitamins and more. A **Schema Normalization** layer then maps 106 metric aliases to a standard dictionary, unifies 24 unit spellings, and applies 24 clinically reliable unit conversions before anything reaches the database. Every family member gets an independent health profile with three-rule anomaly detection (reference ranges / trend windows / personal baseline), streaming record-grounded Q&A with cited source records — open-ended questions are handled by a hand-written **ReAct agent** over four read-only health-data tools — and medication reminders synced with the system calendar. Every LLM call is logged locally (latency / retries / failure type — never the prompt content). The UI is fully bilingual (English / 中文).
 
 > 🔐 **Local-first, privacy first**: all health data lives in an on-device Room database and is never uploaded anywhere; API keys are AES-256-GCM encrypted with Android Keystore; the app is fully usable without configuring any LLM (a built-in offline Q&A engine covers the basics).
 
 **中文**
 
-HomeHealth 面向多成员家庭，是一款本地优先、隐私至上的 Android 健康管理应用。只需拍照或上传体检报告、化验单，**Vision 大模型**即可通过 JSON 模式自动提取 49 类结构化健康指标（血常规、血糖血脂、肝肾功能、维生素等）。入库前，**Schema 归一化**层会把 106 条指标别名映射到标准字典、统一 24 种单位写法、执行 24 类医学上可靠的跨单位换算。每位家庭成员拥有独立健康档案，异常检测由三条规则组成（参考范围 / 趋势时间窗 / 个体基线），另有基于个人记录的健康问答，以及与系统日历联动的用药提醒。每次 LLM 调用都在本地留有观测日志（耗时 / 重试 / 失败类型——不含提示词内容）。界面已全面支持中英双语。
+HomeHealth 面向多成员家庭，是一款本地优先、隐私至上的 Android 健康管理应用。只需拍照或上传体检报告、化验单，**Vision 大模型**即可通过 JSON 模式自动提取 49 类结构化健康指标（血常规、血糖血脂、肝肾功能、维生素等）。入库前，**Schema 归一化**层会把 106 条指标别名映射到标准字典、统一 24 种单位写法、执行 24 类医学上可靠的跨单位换算。每位家庭成员拥有独立健康档案，异常检测由三条规则组成（参考范围 / 趋势时间窗 / 个体基线），另有流式、可溯源到个人记录的健康问答——泛化问题交给一个手写的 **ReAct Agent**（4 个只读健康数据工具）——以及与系统日历联动的用药提醒。每次 LLM 调用都在本地留有观测日志（耗时 / 重试 / 失败类型——不含提示词内容）。界面已全面支持中英双语。
 
 > 🔐 **本地优先，隐私至上**：所有健康数据以 Room 数据库存储在设备本地，不上传任何第三方服务器；API Key 经 Android Keystore AES-256-GCM 加密后保存；不配置任何 LLM 也完全可用（内置离线问答引擎兜底）。
 
@@ -53,7 +53,7 @@ HomeHealth 面向多成员家庭，是一款本地优先、隐私至上的 Andro
 2. **Vision LLM parsing** — a vision model (e.g., glm-4.6v, qwen-vl) extracts metric name / value / unit / date in JSON mode; text-only models are rejected by runtime validation
 3. **Schema normalization** — aliases mapped to the 49-metric standard dictionary; units unified; cross-unit conversions applied only with reliable coefficients — **unknown units are never guessed**
 4. **Human confirmation** — results shown as editable cards (with conversion annotations) before saving; implausible values get an explicit double-confirm
-5. **Continuous insights** — trend charts, three-rule anomaly detection, record-grounded Q&A over personal records, daily medication reminders
+5. **Continuous insights** — trend charts, three-rule anomaly detection, streaming record-grounded Q&A over personal records, daily medication reminders
 
 **中文 —— 从报告到洞察：**
 
@@ -61,7 +61,7 @@ HomeHealth 面向多成员家庭，是一款本地优先、隐私至上的 Andro
 2. **Vision LLM 解析**：视觉大模型以 JSON 模式提取指标名/数值/单位/日期，文本模型在此被严格校验拦截
 3. **Schema 归一化**：指标别名映射标准字典（49 项指标体系），单位写法统一，跨单位按可靠系数换算——**没有系数的单位绝不猜测**
 4. **人工确认**：解析结果以可编辑卡片展示（含换算标注），核对修正后入库；明显可疑的数值会触发二次确认
-5. **持续洞察**：趋势折线图、三规则异常检测、基于个人记录的健康问答、每日用药提醒
+5. **持续洞察**：趋势折线图、三规则异常检测、流式且可溯源到个人记录的健康问答、每日用药提醒
 
 ## 💎 Highlights | 差异化亮点
 
@@ -113,6 +113,12 @@ HomeHealth 面向多成员家庭，是一款本地优先、隐私至上的 Andro
 
 **中文**：提醒可一键写入系统日历（每日重复事件 + 提前 5 分钟通知），**删除提醒时日历日程同步清理**（事件 ID 精确删除 + 签名兜底双通道），不产生孤儿日程。
 
+### 9. 📡 Streaming answers, data basis first | 流式回答 · 数据依据先行
+
+**EN**: Health Q&A streams over SSE — the answer appears token by token instead of after the whole generation. Before the first token even arrives, the app has already shown the **data basis**: which saved records the answer draws on, with reference ranges and high/low flags — so the user sees what the answer stands on *before* reading it. On the keyword-retrieval path every record carries an `[n]` id and the model is instructed to cite it inline, making every figure in the answer traceable to a specific record. General questions that don't point at a metric get a data-scope summary instead (how many records, which metrics) — the basis block is never empty. Report parsing deliberately stays non-streaming: it needs the complete JSON object before anything can be saved.
+
+**中文**：健康问答走 SSE 流式——回答逐字上屏，而不是等整段生成完。**在首个 token 到达之前，界面已经先给出数据依据**：本次回答基于哪些已保存记录（带参考范围与偏高/偏低标注），用户在读到结论前就知道它站在什么之上。走检索路径时每条记录带 `[n]` 编号，并要求模型在数值后内联标注编号，答案里的每个数字都能追溯到具体记录；不指向具体指标的泛化问题则给出数据范围（多少条记录、覆盖哪些指标），依据块永不为空。报告解析刻意保持非流式——它需要完整的 JSON 对象才能入库。
+
 ## ✨ Feature Overview | 功能全景
 
 | Feature | 功能 |
@@ -124,7 +130,7 @@ HomeHealth 面向多成员家庭，是一款本地优先、隐私至上的 Andro
 | 📈 Trend charts · latest / avg / high / low stats | 趋势折线图 · 最新/平均/最高/最低统计 |
 | 🚨 Three-rule anomaly alerts · severity levels · notifications | 三规则异常预警（越界/趋势/个体基线）· 分级 · 系统通知 |
 | 📊 LLM call logs · 30-day per-provider stats | LLM 调用日志 · 近 30 天按供应商统计 |
-| 💬 Record-grounded Q&A · reasoning display · offline engine | 基于记录的健康问答 · 思考过程 · 离线引擎 |
+| 💬 Streaming Q&A · data basis · **ReAct agent** · image attach · offline engine | 流式问答 · 数据依据 · **ReAct Agent** · 随提问附图 · 离线引擎 |
 | 💊 Medication reminders · calendar two-way sync | 用药提醒 · 日历双向联动 |
 | 🌍 English / 中文 UI (alerts included) · dark mode · per-module theming | 中英双语界面（含告警）· 深色模式 · 模块化主题 |
 | 🖼️ Splash screen · adaptive app icon | 启动页 · 自适应应用图标 |
@@ -163,7 +169,13 @@ HomeHealth 面向多成员家庭，是一款本地优先、隐私至上的 Andro
 - **Observability without copying sensitive data** — `llm_call_logs` records latency / sizes / retries / failure types only; prompts and responses (which contain health metrics) are never logged — 可观测性不复制敏感数据：调用日志只记耗时/字符数/重试/失败类型，含健康指标的提示词与回复不入库
 - **`@Upsert` instead of `INSERT OR REPLACE`** — SQLite's REPLACE deletes then re-inserts, which fired FK cascade deletion and once wiped a member's health records — 用 `@Upsert` 替代 REPLACE，避免外键级联误删（真实的踩坑复盘）
 - **Parsing catches `Throwable`, not just `Exception`** — `OutOfMemoryError` is an `Error`; catching only `Exception` crashes the app. It is now a retryable failure state with stuck-state recovery — 解析路径捕获 `Throwable`，OOM 转为可重试失败态，并有僵尸状态恢复
-- **LLM calls go through raw OkHttp** (non-streaming single-shot request/response with fine-grained timeouts, exponential-backoff retry limited to 429/5xx/IO) — LLM 请求走 OkHttp 原生实现（非流式单次请求-响应 + 精细超时 + 仅对 429/5xx/IO 指数退避重试）
+- **LLM calls go through raw OkHttp, streaming only where it pays** — Q&A is **SSE-streamed** (first-token latency instead of wait-for-completion), report parsing stays **non-streaming single-shot** (a half-received JSON object is worthless when the parser needs the complete one); both share fine-grained timeouts and exponential-backoff retry limited to 429/5xx/IO — LLM 请求走 OkHttp 原生实现，**只在有收益的地方流式**：问答走 **SSE 流式**（首字延迟从"整段生成完"降到"首个 token"），报告解析保持**非流式单次请求-响应**（解析要的是完整 JSON，半截对象没有意义）；两条链路共用精细超时与仅限 429/5xx/IO 的指数退避重试
+- **Streaming retries only before the first token** — once part of the answer is on screen, a retry would duplicate it; a mid-stream failure keeps what the user already read and appends an explicit notice instead of silently restarting — 流式只在首个增量到达前重试：回答已部分上屏时重发会造成重复，中途失败保留已生成内容并显式说明，不静默重来
+- **Cancelling a stream cancels the socket, not just the coroutine** — a blocking read never returns on coroutine cancellation, so the in-flight call is cancelled on the way out, releasing the connection instead of holding it until the 120s read timeout — 取消流式要掐断 socket 而不只是取消协程：阻塞读不会因协程取消而返回，退出时主动 `call.cancel()`，避免连接挂到 120s readTimeout 才释放
+- **Agent tools are read-only** — the anomaly tool *reads* alerts that the deterministic engine already decided; it never re-runs detection, because that use case writes rows and can raise notifications. Wrapping it directly would mean "ask one question → alerts appear out of nowhere" — 工具必须只读：异常工具读**已判定**的告警，不重跑检测。`DetectAnomaliesUseCase` 会写库并可能触发通知，直接包成工具等于「问一句话就凭空多出告警」
+- **The last agent turn gets no tools** — rather than ending with unfilled tool calls when the turn budget runs out, tool declarations are dropped on the final turn, so "budget exhausted" and "normal finish" share one code path and there is never a turn with no answer — 最后一轮撤掉工具声明：让「轮数用尽」与「正常收尾」走同一条路径，不会出现「没有回答」的空档
+- **Agent answers are committed in one piece, not token-streamed** — only after a turn ends do we know it was the final one; streaming intermediate reasoning and then retracting it is visible flicker. The fast path still streams token by token — Agent 路径的最终回答整段提交而非逐字上屏：只有一轮结束后才知道它是不是最终回答，中间轮先流再撤回对用户是明显抖动；快路径仍逐字上屏
+- **Server-side turn budget on the client** — max 5 turns, an 8-call tool cap, per-observation truncation, and a tool disabled after 2 consecutive failures, because a model will happily retry the same malformed argument forever — 客户端侧硬护栏：最多 5 轮、工具调用上限 8 次、单条观测截断、同一工具连续失败 2 次即禁用 —— 模型会对着同一个错参数反复重试
 
 ### 🗄️ Database evolution | 数据库演进
 
@@ -260,14 +272,15 @@ Design brief (pre-implementation, Chinese) — 实现前设计蓝图，与最终
 
 ## 🗺️ Roadmap
 
-Q&A today is record-injection over long context — no chunking, embedding or retrieval yet. The evolution path, one step at a time:
+Q&A today is streaming keyword retrieval (BM25) over personal records — no chunking, embedding or vector retrieval yet. The evolution path, one step at a time:
 
-当前问答是「记录注入式长上下文」——尚无切分、向量与检索。演进路线一次一步：
+当前问答是「流式 + 关键词检索（BM25）」式 RAG——尚无切分、embedding 与向量检索。演进路线一次一步：
 
-- [ ] **True RAG** for health Q&A: chunking + embeddings + top-K retrieval with citation of source records — 健康问答升级为真 RAG（切分 + 向量检索 + Top-K + 引用溯源）
-- [ ] **ReAct agent** over a toolset for parsing / normalization / detection / Q&A — 抽工具集串成 ReAct Agent
+- [x] **Keyword-retrieval RAG** for health Q&A: BM25 top-K over personal records + citation of source records — 健康问答检索层：BM25 Top-K 召回 + 引用溯源（含数据依据块）
+- [x] **SSE streaming** answers — SSE 流式回答（问答链路；报告解析需完整 JSON，刻意保持非流式）
+- [x] **ReAct agent** over a health-data toolset, behind a router that keeps the fast path — ReAct Agent：4 个健康数据工具（检索记录 / 参考范围 / 已判定告警 / 读报告图片）+ 路由器（保留快路径）
+- [ ] **Vector retrieval / hybrid search**: embeddings + a local vector store alongside BM25, with reranking — 向量检索 / 混合检索：embedding + 本地向量库，与 BM25 组成混合检索并加重排
 - [ ] **MCP server** exposing health data tools — 以 MCP Server 暴露健康数据工具
-- [ ] **SSE streaming** responses — SSE 流式输出
 - [ ] On-device LLM inference, fully offline — 端侧 LLM 推理，完全离线运行
 - [ ] Health Connect wearable data — 集成 Health Connect 可穿戴设备数据
 - [ ] More document types (imaging reports, etc.) — 支持更多文档类型（影像报告等）

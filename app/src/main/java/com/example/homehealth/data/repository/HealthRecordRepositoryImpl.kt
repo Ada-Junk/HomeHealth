@@ -26,6 +26,9 @@ class HealthRecordRepositoryImpl @Inject constructor(
     override suspend fun getRecentByMember(memberId: String, limit: Int): List<HealthRecord> =
         healthRecordDao.getRecentByMember(memberId, limit)
 
+    override suspend fun getAllByMember(memberId: String): List<HealthRecord> =
+        healthRecordDao.getAllByMember(memberId)
+
     override suspend fun getLatest(memberId: String, type: String): HealthRecord? =
         healthRecordDao.getLatest(memberId, type)
 

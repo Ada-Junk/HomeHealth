@@ -187,12 +187,19 @@
     <string name="qa_empty_members">请先添加家庭成员</string>
     <string name="qa_try_ask">试试问我：「最近血压怎么样？」</string>
     <string name="qa_analyzing">正在分析健康记录…</string>
+    <string name="qa_generating">正在生成…</string>
+    <string name="qa_attach_cd">添加图片</string>
+    <string name="qa_remove_image_cd">移除图片</string>
+    <string name="qa_image_cd">提问附带的图片</string>
+    <string name="qa_tools_show">已调用 %1$d 个工具，查看过程</string>
+    <string name="qa_tools_hide">已调用 %1$d 个工具，收起过程</string>
     <string name="qa_input_hint">输入健康问题…</string>
     <string name="qa_send_cd">发送</string>
     <string name="qa_sources">来源：\n%1$s</string>
     <string name="qa_thinking_show">查看思考过程</string>
     <string name="qa_thinking_hide">收起思考过程</string>
     <string name="vm_qa_failed">回答生成失败：%1$s</string>
+    <string name="vm_qa_attach_failed">图片读取失败：%1$s</string>
     <string name="member_picker_pattern">%1$s（%2$s）</string>
 
     <!-- 设置页 -->
