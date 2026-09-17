@@ -216,7 +216,7 @@ The Room schema is exported to `app/schemas/` (committed), and **every version b
 - Android Studio Ladybug+ / JDK 17 (source compatibility) / Android SDK 37 (min. Android 8.0 / API 26)
 
 ```bash
-git clone https://github.com/Ada-Junk/HomeHealth.git
+git clone https://github.com/SACO1F/HomeHealth.git
 cd HomeHealth
 
 # Windows
@@ -237,7 +237,7 @@ Or open the project in Android Studio and hit Run. APK output: `app/build/output
 - Android Studio Ladybug 及以上 / JDK 17（源码兼容级别）/ Android SDK 37（最低支持 Android 8.0 / API 26）
 
 ```bash
-git clone https://github.com/Ada-Junk/HomeHealth.git
+git clone https://github.com/SACO1F/HomeHealth.git
 cd HomeHealth
 
 # Windows
