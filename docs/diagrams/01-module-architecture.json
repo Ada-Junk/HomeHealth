@@ -1,0 +1,441 @@
+{
+  "schema_version": 1,
+  "diagram_type": "architecture",
+  "meta": {
+    "title": "HomeHealth 模块结构与分层依赖",
+    "locale": "zh-CN",
+    "quality_profile": "showcase",
+    "viewBox": [
+      1320,
+      660
+    ],
+    "repository": {
+      "url": "https://github.com/Ada-Junk/HomeHealth",
+      "provider": "github",
+      "link_mode": "web",
+      "revision": "25052244658d89e2c8fd45e336160aa7ea7e1d0e"
+    },
+    "views": [
+      {
+        "id": "main-path",
+        "label": "主链路：UI → 领域 → 数据",
+        "focus": [
+          "ui",
+          "usecase",
+          "domainrepo",
+          "repoimpl",
+          "room"
+        ],
+        "note": "界面只依赖领域层接口，由 Hilt 注入数据层实现。"
+      },
+      {
+        "id": "agent-path",
+        "label": "Agent 链路",
+        "focus": [
+          "agent",
+          "toolset",
+          "domainrepo",
+          "llmclient",
+          "providers"
+        ],
+        "note": "ReActAgent 通过只读工具集取数，模型侧走同一 LlmClient。"
+      },
+      {
+        "id": "boundaries",
+        "label": "三层边界",
+        "focus": [
+          "ui",
+          "usecase",
+          "domainrepo",
+          "repoimpl",
+          "llmclient",
+          "room"
+        ],
+        "note": "表现层 / 领域层 / 数据层三段分明，依赖单向向下。"
+      }
+    ]
+  },
+  "components": [
+    {
+      "id": "ui",
+      "type": "frontend",
+      "label": "Compose UI",
+      "sublabel": "8 屏 · 导航",
+      "pos": [
+        80,
+        120
+      ],
+      "size": [
+        240,
+        80
+      ],
+      "sources": [
+        {
+          "path": "app/src/main/java/com/example/homehealth/ui/screens/qa/QAViewModel.kt",
+          "label": "ViewModel 注入"
+        }
+      ]
+    },
+    {
+      "id": "worker",
+      "type": "backend",
+      "label": "WorkManager",
+      "sublabel": "每日检查 · 通知",
+      "pos": [
+        80,
+        300
+      ],
+      "size": [
+        240,
+        80
+      ],
+      "sources": [
+        {
+          "path": "app/src/main/java/com/example/homehealth/worker/DailyCheckWorker.kt",
+          "label": "DailyCheckWorker"
+        }
+      ]
+    },
+    {
+      "id": "usecase",
+      "type": "backend",
+      "label": "UseCase ×3",
+      "sublabel": "检测 · 解析",
+      "pos": [
+        400,
+        120
+      ],
+      "size": [
+        240,
+        80
+      ],
+      "sources": [
+        {
+          "path": "app/src/main/java/com/example/homehealth/domain/usecase/DetectAnomaliesUseCase.kt",
+          "label": "三规则检测"
+        }
+      ]
+    },
+    {
+      "id": "domainrepo",
+      "type": "backend",
+      "label": "Repository 接口 ×7",
+      "sublabel": "domain/repository",
+      "pos": [
+        400,
+        300
+      ],
+      "size": [
+        240,
+        80
+      ],
+      "sources": [
+        {
+          "path": "app/src/main/java/com/example/homehealth/domain/repository/QARepository.kt",
+          "label": "接口"
+        }
+      ]
+    },
+    {
+      "id": "toolset",
+      "type": "backend",
+      "label": "HealthTool ×4",
+      "sublabel": "只读工具集",
+      "pos": [
+        400,
+        480
+      ],
+      "size": [
+        240,
+        80
+      ],
+      "sources": [
+        {
+          "path": "app/src/main/java/com/example/homehealth/domain/tool/HealthTool.kt",
+          "label": "工具契约"
+        },
+        {
+          "path": "app/src/main/java/com/example/homehealth/domain/tool/HealthToolRegistry.kt",
+          "label": "注册表"
+        }
+      ]
+    },
+    {
+      "id": "repoimpl",
+      "type": "backend",
+      "label": "RepositoryImpl ×7",
+      "sublabel": "data/repository",
+      "pos": [
+        720,
+        120
+      ],
+      "size": [
+        240,
+        80
+      ],
+      "sources": [
+        {
+          "path": "app/src/main/java/com/example/homehealth/data/repository/QARepositoryImpl.kt",
+          "label": "问答双路径"
+        }
+      ]
+    },
+    {
+      "id": "llmclient",
+      "type": "backend",
+      "label": "LlmClient",
+      "sublabel": "OkHttp · SSE",
+      "pos": [
+        720,
+        300
+      ],
+      "size": [
+        240,
+        80
+      ],
+      "sources": [
+        {
+          "path": "app/src/main/java/com/example/homehealth/data/remote/LlmClient.kt",
+          "line": 56,
+          "label": "实现网关与读图"
+        },
+        {
+          "path": "app/src/main/java/com/example/homehealth/data/remote/AgentProtocol.kt",
+          "line": 73,
+          "label": "AgentLlmGateway"
+        }
+      ]
+    },
+    {
+      "id": "agent",
+      "type": "backend",
+      "label": "ReActAgent",
+      "sublabel": "手写 ReAct 循环",
+      "pos": [
+        720,
+        480
+      ],
+      "size": [
+        240,
+        80
+      ],
+      "sources": [
+        {
+          "path": "app/src/main/java/com/example/homehealth/data/remote/ReActAgent.kt",
+          "line": 46,
+          "label": "run()"
+        }
+      ]
+    },
+    {
+      "id": "room",
+      "type": "database",
+      "label": "Room v8",
+      "sublabel": "7 张表 · 迁移",
+      "pos": [
+        1020,
+        120
+      ],
+      "size": [
+        240,
+        80
+      ],
+      "sources": [
+        {
+          "path": "app/src/main/java/com/example/homehealth/data/local/AppDatabase.kt",
+          "line": 31,
+          "label": "version = 8"
+        }
+      ]
+    },
+    {
+      "id": "providers",
+      "type": "external",
+      "label": "LLM 供应商 ×7",
+      "sublabel": "端侧直连 · 无中转",
+      "pos": [
+        1020,
+        300
+      ],
+      "size": [
+        240,
+        80
+      ],
+      "sources": [
+        {
+          "path": "app/src/main/java/com/example/homehealth/data/remote/LlmProviders.kt",
+          "label": "供应商注册表"
+        }
+      ]
+    }
+  ],
+  "boundaries": [
+    {
+      "kind": "region",
+      "label": "表现层",
+      "wraps": [
+        "ui",
+        "worker"
+      ],
+      "pad": 24
+    },
+    {
+      "kind": "region",
+      "label": "领域层 · 纯 Kotlin",
+      "wraps": [
+        "usecase",
+        "domainrepo",
+        "toolset"
+      ],
+      "pad": 24
+    },
+    {
+      "kind": "region",
+      "label": "数据层",
+      "wraps": [
+        "repoimpl",
+        "llmclient",
+        "agent"
+      ],
+      "pad": 24
+    }
+  ],
+  "connections": [
+    {
+      "id": "ui-usecase",
+      "from": "ui",
+      "to": "usecase",
+      "label": "调用",
+      "variant": "emphasis",
+      "fromSide": "right",
+      "toSide": "left"
+    },
+    {
+      "id": "usecase-repo",
+      "from": "usecase",
+      "to": "domainrepo",
+      "label": "依赖接口",
+      "variant": "emphasis",
+      "fromSide": "bottom",
+      "toSide": "top",
+      "labelAt": [
+        520,
+        250
+      ]
+    },
+    {
+      "id": "impl-binds",
+      "from": "repoimpl",
+      "to": "domainrepo",
+      "label": "实现 · @Binds",
+      "fromSide": "left",
+      "toSide": "right"
+    },
+    {
+      "id": "repoimpl-room",
+      "from": "repoimpl",
+      "to": "room",
+      "label": "DAO 读写",
+      "fromSide": "right",
+      "toSide": "left"
+    },
+    {
+      "id": "repoimpl-llm",
+      "from": "repoimpl",
+      "to": "llmclient",
+      "label": "问答 / 解析",
+      "fromSide": "bottom",
+      "toSide": "top",
+      "labelAt": [
+        840,
+        250
+      ]
+    },
+    {
+      "id": "agent-tools",
+      "from": "agent",
+      "to": "toolset",
+      "label": "调用工具",
+      "fromSide": "left",
+      "toSide": "right"
+    },
+    {
+      "id": "tools-repo",
+      "from": "toolset",
+      "to": "domainrepo",
+      "label": "读记录 / 告警",
+      "fromSide": "top",
+      "toSide": "bottom",
+      "labelAt": [
+        520,
+        430
+      ]
+    },
+    {
+      "id": "agent-gateway",
+      "from": "agent",
+      "to": "llmclient",
+      "label": "AgentLlmGateway",
+      "fromSide": "top",
+      "toSide": "bottom",
+      "labelAt": [
+        840,
+        430
+      ]
+    },
+    {
+      "id": "llm-providers",
+      "from": "llmclient",
+      "to": "providers",
+      "label": "HTTPS · SSE",
+      "variant": "emphasis",
+      "fromSide": "right",
+      "toSide": "left"
+    },
+    {
+      "id": "worker-usecase",
+      "from": "worker",
+      "to": "usecase",
+      "label": "定时触发",
+      "variant": "dashed",
+      "fromSide": "right",
+      "toSide": "left",
+      "via": [
+        [
+          360,
+          340
+        ],
+        [
+          360,
+          160
+        ]
+      ]
+    }
+  ],
+  "cards": [
+    {
+      "dot": "cyan",
+      "title": "分层边界",
+      "items": [
+        "界面只依赖 domain 层接口，实现由 Hilt @Binds 注入",
+        "domain 层为纯 Kotlin，不引用 Android 框架类型"
+      ]
+    },
+    {
+      "dot": "violet",
+      "title": "Agent 侧",
+      "items": [
+        "ReActAgent 只依赖 AgentLlmGateway 与 ToolProvider 两个接口",
+        "4 个工具均为只读，经 domain 层接口取数"
+      ]
+    },
+    {
+      "dot": "rose",
+      "title": "隐私与存储",
+      "items": [
+        "API Key 由 util/SecretStore 经 Keystore AES-256-GCM 加密保存",
+        "健康数据仅存 Room；请求直达供应商，不经中转服务"
+      ]
+    }
+  ]
+}

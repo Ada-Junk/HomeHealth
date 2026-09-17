@@ -1,0 +1,320 @@
+{
+  "schema_version": 2,
+  "diagram_type": "workflow",
+  "meta": {
+    "title": "ReActAgent 循环与护栏",
+    "locale": "zh-CN",
+    "quality_profile": "showcase",
+    "viewBox": [
+      1200,
+      680
+    ],
+    "views": [
+      {
+        "id": "happy",
+        "label": "一次带工具的回答",
+        "focus": [
+          "ask",
+          "route",
+          "prompt",
+          "turn",
+          "judge",
+          "tools",
+          "obs",
+          "answer"
+        ],
+        "note": "问题无强指标词才进 Agent；模型查完工具后用证据作答。"
+      },
+      {
+        "id": "loop",
+        "label": "ReAct 回环",
+        "focus": [
+          "turn",
+          "judge",
+          "tools",
+          "obs"
+        ],
+        "note": "Observation 回填后重进下一轮，最多 5 轮。"
+      },
+      {
+        "id": "guards",
+        "label": "熔断与降级",
+        "focus": [
+          "disable",
+          "fallback",
+          "turn",
+          "judge"
+        ],
+        "note": "同工具失败 2 次熔断；请求异常则降级本地规则引擎。"
+      }
+    ]
+  },
+  "lanes": [
+    {
+      "id": "entry",
+      "label": "入口与路由"
+    },
+    {
+      "id": "loop",
+      "label": "ReAct 循环"
+    },
+    {
+      "id": "tool",
+      "label": "工具执行与观测"
+    },
+    {
+      "id": "guard",
+      "label": "护栏与降级",
+      "variant": "exception"
+    }
+  ],
+  "phases": [
+    {
+      "id": "intake",
+      "label": "进站判定",
+      "fromCol": 0,
+      "toCol": 1
+    },
+    {
+      "id": "reasoning",
+      "label": "单轮推理",
+      "fromCol": 2,
+      "toCol": 3,
+      "variant": "emphasis"
+    },
+    {
+      "id": "acting",
+      "label": "行动与收尾",
+      "fromCol": 4,
+      "toCol": 5,
+      "variant": "dashed"
+    }
+  ],
+  "groups": [
+    {
+      "id": "loop_body",
+      "label": "轮循环 · 最多 5 轮",
+      "lane": "loop",
+      "fromCol": 2,
+      "toCol": 3,
+      "variant": "emphasis"
+    },
+    {
+      "id": "guard_path",
+      "label": "熔断与回退",
+      "lane": "guard",
+      "fromCol": 4,
+      "toCol": 5,
+      "variant": "security"
+    }
+  ],
+  "nodes": [
+    {
+      "id": "ask",
+      "lane": "entry",
+      "col": 0,
+      "type": "external",
+      "label": "用户提问",
+      "sublabel": "成员 + 问题 + 可附图",
+      "width": 148
+    },
+    {
+      "id": "route",
+      "lane": "entry",
+      "col": 1,
+      "type": "backend",
+      "label": "路由闸门",
+      "sublabel": "无强指标词才进 Agent",
+      "tag": "快路径优先",
+      "width": 148
+    },
+    {
+      "id": "prompt",
+      "lane": "loop",
+      "col": 2,
+      "type": "backend",
+      "label": "上下文组装",
+      "sublabel": "提示 + 范围概览",
+      "tag": "只给范围不给明细",
+      "width": 148
+    },
+    {
+      "id": "turn",
+      "lane": "loop",
+      "col": 3,
+      "type": "backend",
+      "label": "LLM 单轮调用",
+      "sublabel": "gateway.turn()",
+      "tag": "正文先缓冲",
+      "width": 148
+    },
+    {
+      "id": "judge",
+      "lane": "loop",
+      "col": 4,
+      "type": "backend",
+      "label": "判定本轮",
+      "sublabel": "无 tool_calls = 收尾",
+      "width": 148
+    },
+    {
+      "id": "answer",
+      "lane": "loop",
+      "col": 5,
+      "type": "backend",
+      "label": "最终回答",
+      "sublabel": "整段提交，不逐字上屏",
+      "tag": "避免中间轮抖动",
+      "width": 148
+    },
+    {
+      "id": "tools",
+      "lane": "tool",
+      "col": 4,
+      "type": "messagebus",
+      "label": "执行工具 ×N",
+      "sublabel": "只读健康数据工具",
+      "tag": "同轮可并行",
+      "width": 148
+    },
+    {
+      "id": "obs",
+      "lane": "tool",
+      "col": 5,
+      "type": "backend",
+      "label": "观测回填",
+      "sublabel": "截断至 1500 字符",
+      "width": 148
+    },
+    {
+      "id": "disable",
+      "lane": "guard",
+      "col": 4,
+      "type": "security",
+      "label": "同工具熔断",
+      "sublabel": "连续失败 2 次即禁用",
+      "width": 148
+    },
+    {
+      "id": "fallback",
+      "lane": "guard",
+      "col": 5,
+      "type": "security",
+      "label": "降级本地引擎",
+      "sublabel": "无产出时兜底",
+      "tag": "不丢半截观测",
+      "width": 148
+    }
+  ],
+  "edges": [
+    {
+      "id": "ask-route",
+      "from": "ask",
+      "to": "route",
+      "variant": "default"
+    },
+    {
+      "id": "route-prompt",
+      "from": "route",
+      "to": "prompt",
+      "label": "泛化问题",
+      "variant": "emphasis",
+      "role": "main"
+    },
+    {
+      "id": "prompt-turn",
+      "from": "prompt",
+      "to": "turn",
+      "variant": "default",
+      "role": "main"
+    },
+    {
+      "id": "turn-judge",
+      "from": "turn",
+      "to": "judge",
+      "variant": "default",
+      "role": "main"
+    },
+    {
+      "id": "judge-tools",
+      "from": "judge",
+      "to": "tools",
+      "label": "有 tool_calls",
+      "variant": "emphasis",
+      "role": "main"
+    },
+    {
+      "id": "judge-answer",
+      "from": "judge",
+      "to": "answer",
+      "label": "无 tool_calls",
+      "variant": "default",
+      "role": "return"
+    },
+    {
+      "id": "tools-obs",
+      "from": "tools",
+      "to": "obs",
+      "variant": "default",
+      "role": "main"
+    },
+    {
+      "id": "obs-turn",
+      "from": "obs",
+      "to": "turn",
+      "label": "ReAct 回环",
+      "variant": "emphasis",
+      "role": "return"
+    },
+    {
+      "id": "tools-disable",
+      "from": "tools",
+      "to": "disable",
+      "label": "失败累计",
+      "variant": "dashed",
+      "role": "branch"
+    },
+    {
+      "id": "turn-fallback",
+      "from": "turn",
+      "to": "fallback",
+      "label": "请求异常",
+      "variant": "security",
+      "role": "error"
+    },
+    {
+      "id": "fallback-answer",
+      "from": "fallback",
+      "to": "answer",
+      "label": "兜底回答",
+      "variant": "dashed",
+      "role": "branch"
+    }
+  ],
+  "cards": [
+    {
+      "dot": "cyan",
+      "title": "为什么手写循环",
+      "items": [
+        "单进程单循环，LangGraph / AutoGen 的编排抽象换不来收益",
+        "停机与失败判断留在代码里，可被 JVM 单测覆盖"
+      ]
+    },
+    {
+      "dot": "violet",
+      "title": "两条刻意的设计",
+      "items": [
+        "最后一轮撤掉工具声明，让「轮数用尽」与「正常收尾」合流",
+        "Agent 最终回答整段提交；快路径仍逐字流式"
+      ]
+    },
+    {
+      "dot": "rose",
+      "title": "护栏常量（AgentConfig）",
+      "items": [
+        "MAX_TURNS = 5 · MAX_TOOL_CALLS = 8 · 连续失败 2 次禁用",
+        "本地工具超时 10s，读图工具 60s；观测截断 1500 字符"
+      ]
+    }
+  ]
+}
