@@ -16,3 +16,19 @@ captures/
 
 # Gradle 本地守护进程 JVM 配置（因机器而异）
 gradle/gradle-daemon-jvm.properties
+
+# 🔐 签名密钥与凭据 —— 绝不入库
+# 密钥一旦泄露，任何人都能签发可覆盖你已上架应用的更新包。
+keystore.properties
+*.jks
+*.keystore
+keystore/
+
+# 发布产物（体积大，按需重新构建）；但保留发布指南这一份文档
+release/*
+!release/发布指南.md
+
+# 图表校验副产物（截图与回执，非交付物）
+*.visual-check.json
+*.visual-check.html
+*.visual-check.*.png

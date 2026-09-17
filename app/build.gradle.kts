@@ -1,3 +1,5 @@
+import java.util.Properties
+
 plugins {
     id("com.android.application")
     id("com.google.devtools.ksp")
@@ -10,14 +12,26 @@ ksp {
     arg("room.schemaLocation", "$projectDir/schemas")
 }
 
+// Release 签名配置从 keystore.properties 读取（该文件不入库）。
+// 文件缺失时不报错，仅跳过签名配置 —— 这样没有密钥的协作者仍能构建 debug。
+val keystorePropsFile = rootProject.file("keystore.properties")
+val keystoreProps = Properties()
+val hasReleaseSigning = keystorePropsFile.exists()
+if (hasReleaseSigning) {
+    keystorePropsFile.inputStream().use { keystoreProps.load(it) }
+}
+
 android {
     namespace = "com.example.homehealth"
     compileSdk = 37
 
     defaultConfig {
-        applicationId = "com.example.homehealth"
+        applicationId = "com.adajunk.homehealth"
         minSdk = 26
-        targetSdk = 34
+        // targetSdk 36（Android 16）：Google Play 自 2026-08-31 起要求新应用与更新
+        // 必须 target API 36+；国内商店的下限要求也在持续跟进。
+        // 与 build-tools 36.0.0 对齐。升级前请按下方行为变更逐项回归。
+        targetSdk = 36
         versionCode = 2
         versionName = "1.2.0"
 
@@ -26,13 +40,33 @@ android {
         }
     }
 
+    signingConfigs {
+        if (hasReleaseSigning) {
+            create("release") {
+                storeFile = rootProject.file(keystoreProps.getProperty("storeFile"))
+                storePassword = keystoreProps.getProperty("storePassword")
+                keyAlias = keystoreProps.getProperty("keyAlias")
+                keyPassword = keystoreProps.getProperty("keyPassword")
+                // 开启 V1+V2+V3 签名：国内各商店与低版本 Android 的兼容性最好
+                enableV1Signing = true
+                enableV2Signing = true
+                enableV3Signing = true
+            }
+        }
+    }
+
     buildTypes {
         release {
-            isMinifyEnabled = false
+            // 发布包必须开启混淆与资源压缩，否则体积与逆向风险都不可接受
+            isMinifyEnabled = true
+            isShrinkResources = true
             proguardFiles(
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro"
             )
+            if (hasReleaseSigning) {
+                signingConfig = signingConfigs.getByName("release")
+            }
         }
     }
     compileOptions {
@@ -55,6 +89,12 @@ android {
     packaging {
         resources {
             excludes += "/META-INF/{AL2.0,LGPL2.1}"
+        }
+    }
+    // AAB 打包：国内部分商店（如 Google Play）要求，这里统一配置
+    bundle {
+        language {
+            enableSplit = false
         }
     }
 }
